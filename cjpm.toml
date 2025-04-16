@@ -1,0 +1,14 @@
+[dependencies]
+
+[package]
+  cjc-version = "0.53.18"
+  compile-option = "-Woff unused"
+  description = "An interactive web playground for analyzing, refactoring, and manipulating Cangjie code."
+  link-option = ""
+  name = "playground"
+  output-type = "executable"
+  override-compile-option = ""
+  src-dir = "src"
+  target-dir = "target"
+  version = "1.0.0"
+  package-configuration = {}
