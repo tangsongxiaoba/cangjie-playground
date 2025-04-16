@@ -2,7 +2,7 @@
 
 [package]
   cjc-version = "0.53.18"
-  compile-option = "-Woff unused"
+  compile-option = "-Woff unused --diagnostic-format=noColor"
   description = "An interactive web playground for analyzing, refactoring, and manipulating Cangjie code."
   link-option = ""
   name = "playground"
@@ -11,4 +11,4 @@
   src-dir = "src"
   target-dir = "target"
   version = "1.0.0"
-  package-configuration = {}
+  [package.package-configuration]
