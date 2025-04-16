@@ -1,6 +1,7 @@
 package playground
 
 import std.ast.*
+import std.collection.*
 
 class CJCodeTool {
     static func generateCodeSignature(code: String): String {
@@ -18,9 +19,114 @@ class CJCodeTool {
         return code
     }
 
-    static func foldConstant(code: String): String {
-        // TODO
-        return code
+    /*
+    折叠常量
+    */
+    static func foldConstant(str: String) : String {
+        var program = str.toProgram()
+        for(decl in program.decls) {
+            if (decl is MainDecl) {
+                var ndecl = (decl as MainDecl).getOrThrow()
+                for(node in ndecl.block.nodes) {
+                    procNode(node)
+                }
+            } else if (decl is FuncDecl) {
+                var ndecl = (decl as FuncDecl).getOrThrow()
+                for(node in ndecl.block.nodes) {
+                    procNode(node)
+                }
+            } else if (decl is ClassDecl) {
+                var ndecl = (decl as FuncDecl).getOrThrow()
+                for(node in ndecl.block.nodes) {
+                    procNode(node)
+                }
+            }
+        }
+        return program.toString()
+    }
+
+    /*
+    处理node
+    */
+    static func procNode(node: Node) {
+        if(node is VarDecl) {
+            var var_decl = (node as VarDecl).getOrThrow()
+            try {
+                var_decl.expr = calExpr(var_decl.expr)
+            } catch(e: ASTException) {
+                return
+            }
+        } else if (node is AssignExpr) {
+            var assign_expr = (node as AssignExpr).getOrThrow()
+            assign_expr.rightExpr = calExpr(assign_expr.rightExpr)
+        }
+    }
+
+    /*
+    如果表达式全部为常数，计算表达式的值
+    */
+    static func calExpr(expr : Expr) : Expr {
+        if(expr is LitConstExpr) {
+            return (expr as LitConstExpr).getOrThrow()
+        }
+        if(expr is BinaryExpr) {
+            var binaryExpr = (expr as BinaryExpr).getOrThrow()
+            var leftExpr = calExpr(binaryExpr.leftExpr)
+            var rightExpr = calExpr(binaryExpr.rightExpr)
+            
+            if(leftExpr is LitConstExpr && rightExpr is LitConstExpr) {
+                var leftExpr = (leftExpr as LitConstExpr).getOrThrow()
+                var rightExpr = (rightExpr as LitConstExpr).getOrThrow()
+                
+                if(binaryExpr.op.kind == TokenKind.ADD) {
+                    if(leftExpr.literal.kind == INTEGER_LITERAL && rightExpr.literal.kind == INTEGER_LITERAL) {
+                        var constant = Int64.parse(leftExpr.literal.value) + Int64.parse(rightExpr.literal.value)
+                        return LitConstExpr(quote($(constant)))
+                    } else {
+                        var constant = Float64.parse(leftExpr.literal.value) + Float64.parse(rightExpr.literal.value)
+                        return LitConstExpr(quote($(constant)))
+                    }
+                } else if (binaryExpr.op.kind == TokenKind.SUB) {
+                    if(leftExpr.literal.kind == INTEGER_LITERAL && rightExpr.literal.kind == INTEGER_LITERAL) {
+                        var constant = Int64.parse(leftExpr.literal.value) - Int64.parse(rightExpr.literal.value)
+                        return LitConstExpr(quote($(constant)))
+                    } else {
+                        var constant = Float64.parse(leftExpr.literal.value) - Float64.parse(rightExpr.literal.value)
+                        return LitConstExpr(quote($(constant)))
+                    }
+                } else if (binaryExpr.op.kind == TokenKind.MUL) {
+                    if(leftExpr.literal.kind == INTEGER_LITERAL && rightExpr.literal.kind == INTEGER_LITERAL) {
+                        var constant = Int64.parse(leftExpr.literal.value) * Int64.parse(rightExpr.literal.value)
+                        return LitConstExpr(quote($(constant)))
+                    } else {
+                        var constant = Float64.parse(leftExpr.literal.value) * Float64.parse(rightExpr.literal.value)
+                        return LitConstExpr(quote($(constant)))
+                    }
+                } else if (binaryExpr.op.kind == TokenKind.DIV) {
+                    var constant = Float64.parse(leftExpr.literal.value) / Float64.parse(rightExpr.literal.value)
+                    return LitConstExpr(quote($(constant)))
+                } else if (binaryExpr.op.kind == TokenKind.MOD) {
+                    var int_constant = Int64.parse(leftExpr.literal.value) % Int64.parse(rightExpr.literal.value)
+                    return LitConstExpr(quote($(int_constant)))
+                }
+                else {
+                    return expr
+                }
+            }
+
+            if(leftExpr is LitConstExpr) {
+                binaryExpr.leftExpr = (leftExpr as LitConstExpr).getOrThrow()
+            }
+            if(rightExpr is LitConstExpr) {
+                binaryExpr.rightExpr = (rightExpr as LitConstExpr).getOrThrow()
+            }
+            return binaryExpr
+        }
+        if(expr is ParenExpr) {
+            var parenExpr = (expr as ParenExpr).getOrThrow()
+            return calExpr(parenExpr.parenthesizedExpr)
+        }
+        return expr
     }
 
     /*
