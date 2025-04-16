@@ -13,3 +13,9 @@ extend Token {
         return this.toTokens().toString()
     }
 }
+
+extend Program {
+    func toString(): String {
+        return this.toTokens().toString()
+    }
+}
