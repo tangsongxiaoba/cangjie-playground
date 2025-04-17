@@ -16,36 +16,45 @@ class CJCodeTool {
     }
 
     static func generateDocument(code: String, path: String): String {
+        func addSpace(n: Int32, str: String) : StringBuilder {
+            var tempBuilder = StringBuilder()
+            for(i in 1..n) {
+                tempBuilder.append(' ')
+            }
+            tempBuilder.append(str)
+            tempBuilder.append('\n')
+            return tempBuilder
+        }
+        func getIndex(tokens: Tokens, decl: Decl) : Option<Int64> {
+            var i = 0
+            let firstToken = decl.toTokens().get(0)
+            for(token in tokens) {
+                if(token == firstToken){
+                    return i
+                }
+                i++
+            }
+            return None
+        }
         // TODO
         var program = code.toProgram()
         var programTokens = program.toTokens()
         var decl = findDeclByPath(program, splitPath(path))
+        var strDecl = decl.toTokens().toString()
         let col = decl.toTokens().get(0).pos.column
         let line = decl.toTokens().get(0).pos.line
         let ret = "this is a test text"
         var retBuilder = StringBuilder()
-        let retTokens = Tokens()
-        for(token in programTokens){
-            if(token.pos.line < line){
-                retTokens.append(token)
-            }
-        }
         retBuilder.append(addSpace(col, '/*'))
         retBuilder.append(addSpace(col, ret))
         retBuilder.append(addSpace(col, '*/'))
-        retBuilder.append(code)
-        return retBuilder.toString()
+
+        let index : Int64 = getIndex(programTokens, decl) ?? throw Exception("cannot get index of decl")
+        
+        return programTokens.insert(index, cangjieLex(retBuilder.toString())).toString()
     }
 
-    static func addSpace(n: Int32, str: String) : StringBuilder {
-        var tempBuilder = StringBuilder()
-        for(i in 1..n) {
-            tempBuilder.append(' ')
-        }
-        tempBuilder.append(str)
-        tempBuilder.append('\n')
-        return tempBuilder
-    }
+    
 
     /*
     折叠常量
