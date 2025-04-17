@@ -36,6 +36,14 @@ class CJCodeTool {
             }
             return None
         }
+        func getDoc(code: String) : String {
+            let robot = LLM(url: 'https://api.siliconflow.cn/v1/chat/completions',
+                key: 'sk-pqwthdmbesdwldfllezgjildshqhezpwzjbupqolzijkxjoa',
+                model: 'deepseek-ai/DeepSeek-V3',
+                context: true)
+
+            return robot.chat(code)
+        }
         // TODO
         var program = code.toProgram()
         var programTokens = program.toTokens()
@@ -43,7 +51,7 @@ class CJCodeTool {
         var strDecl = decl.toTokens().toString()
         let col = decl.toTokens().get(0).pos.column
         let line = decl.toTokens().get(0).pos.line
-        let ret = "this is a test text"
+        let ret = getDoc(strDecl)
         var retBuilder = StringBuilder()
         retBuilder.append(addSpace(col, '/*'))
         retBuilder.append(addSpace(col, ret))
