@@ -49,7 +49,7 @@ class CJCodeTool {
     /*
     处理node
     */
-    static func procNode(node: Node) {
+    static func procNode(node: Node) : Unit{
         if(node is VarDecl) {
             var var_decl = (node as VarDecl).getOrThrow()
             try {
@@ -60,6 +60,11 @@ class CJCodeTool {
         } else if (node is AssignExpr) {
             var assign_expr = (node as AssignExpr).getOrThrow()
             assign_expr.rightExpr = calExpr(assign_expr.rightExpr)
+        } else if (node is ForInExpr) {
+            var for_in_expr = (node as ForInExpr).getOrThrow()
+            for(inner_node in for_in_expr.block.nodes) {
+                procNode(inner_node)
+            }
         }
     }
 
