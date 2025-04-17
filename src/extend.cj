@@ -19,3 +19,11 @@ extend Program {
         return this.toTokens().toString()
     }
 }
+
+extend Tokens {
+    func insert(index: Int64, newTokens: Tokens) : Tokens {
+        var front = this[0..index]
+        var back = this[index..this.size]
+        return front.append(newTokens).append(back)
+    }
+}
