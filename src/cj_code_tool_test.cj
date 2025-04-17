@@ -68,3 +68,41 @@ main() : Int64 {
         println(CJCodeTool.foldConstant(code))
     }
 }
+
+@Test
+class GenerateDocumentTest {
+    private let code = """
+interface I1 {
+    mut prop size: Int64
+}
+
+class C <: I1 {
+    private var mySize = 0
+
+    public mut prop size: Int64 {
+        get() {
+            mySize
+        }
+        set(value) {
+            mySize = value
+        }
+    }
+
+    public func getSize() {
+        mySize
+    }
+}
+
+public func testC() {
+    let a: I1 = C()
+    a.size = 5
+    println(a.size)
+}
+"""
+    private let path = "C.getSize"
+
+    @TestCase
+    private func testGenerateDocument() {
+        println(CJCodeTool.generateDocument(code, path))
+    }
+}
