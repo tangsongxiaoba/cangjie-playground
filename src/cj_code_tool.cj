@@ -65,6 +65,12 @@ class CJCodeTool {
             for(inner_node in for_in_expr.block.nodes) {
                 procNode(inner_node)
             }
+        } else if (node is WhileExpr) {
+            var while_expr = (node as WhileExpr).getOrThrow()
+            while_expr.condition = calExpr(while_expr.condition)
+            for(inner_node in while_expr.block.nodes) {
+                procNode(inner_node)
+            }
         }
     }
 
