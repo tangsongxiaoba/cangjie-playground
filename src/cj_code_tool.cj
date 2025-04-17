@@ -17,7 +17,34 @@ class CJCodeTool {
 
     static func generateDocument(code: String, path: String): String {
         // TODO
-        return code
+        var program = code.toProgram()
+        var programTokens = program.toTokens()
+        var decl = findDeclByPath(program, splitPath(path))
+        let col = decl.toTokens().get(0).pos.column
+        let line = decl.toTokens().get(0).pos.line
+        let ret = "this is a test text"
+        var retBuilder = StringBuilder()
+        let retTokens = Tokens()
+        for(token in programTokens){
+            if(token.pos.line < line){
+                retTokens.append(token)
+            }
+        }
+        retBuilder.append(addSpace(col, '/*'))
+        retBuilder.append(addSpace(col, ret))
+        retBuilder.append(addSpace(col, '*/'))
+        retBuilder.append(code)
+        return retBuilder.toString()
+    }
+
+    static func addSpace(n: Int32, str: String) : StringBuilder {
+        var tempBuilder = StringBuilder()
+        for(i in 1..n) {
+            tempBuilder.append(' ')
+        }
+        tempBuilder.append(str)
+        tempBuilder.append('\n')
+        return tempBuilder
     }
 
     /*
@@ -25,7 +52,6 @@ class CJCodeTool {
     */
     static func foldConstant(str: String) : String {
         var program = str.toProgram()
-        program.dump()
         for(decl in program.decls) {
             if (decl is MainDecl) {
                 var ndecl = (decl as MainDecl).getOrThrow()
