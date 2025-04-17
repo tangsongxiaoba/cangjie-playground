@@ -2,6 +2,7 @@ package playground
 
 import std.ast.*
 import std.collection.*
+import std.convert.*
 
 class CJCodeTool {
     static func generateCodeSignature(code: String): String {
