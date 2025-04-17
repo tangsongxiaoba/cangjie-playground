@@ -156,9 +156,11 @@ class CJCodeTool {
             procNode(ifExpr)
             return expr
         }
-        // if(expr is Block) {
-
-        // }
+        if(expr is Block) {
+            var block = (expr as Block).getOrThrow()
+            procBlock(block)
+            return expr
+        }
         return expr
     }
 
