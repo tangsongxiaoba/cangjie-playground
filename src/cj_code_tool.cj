@@ -25,6 +25,7 @@ class CJCodeTool {
     */
     static func foldConstant(str: String) : String {
         var program = str.toProgram()
+        program.dump()
         for(decl in program.decls) {
             if (decl is MainDecl) {
                 var ndecl = (decl as MainDecl).getOrThrow()
@@ -69,6 +70,15 @@ class CJCodeTool {
             var while_expr = (node as WhileExpr).getOrThrow()
             while_expr.condition = calExpr(while_expr.condition)
             for(inner_node in while_expr.block.nodes) {
+                procNode(inner_node)
+            }
+        } else if (node is IfExpr) {
+            var if_expr = (node as IfExpr).getOrThrow()
+            if_expr.condition = calExpr(if_expr.condition)
+            try {
+                if_expr.elseExpr = calExpr(if_expr.elseExpr)
+            } catch (e: ASTException) {}
+            for(inner_node in if_expr.ifBlock.nodes) {
                 procNode(inner_node)
             }
         }
@@ -138,6 +148,14 @@ class CJCodeTool {
             var parenExpr = (expr as ParenExpr).getOrThrow()
             return calExpr(parenExpr.parenthesizedExpr)
         }
+        if(expr is IfExpr) {
+            var ifExpr = (expr as IfExpr).getOrThrow()
+            procNode(ifExpr)
+            return expr
+        }
+        // if(expr is Block) {
+
+        // }
         return expr
     }
 
