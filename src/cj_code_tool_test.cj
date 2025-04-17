@@ -41,3 +41,30 @@ public func testC() {
         decl.dump()
     }
 }
+
+@Test
+class FoldConstantTest {
+    private let code = 
+"""
+func myfunc(a: Float64, n: Int64) : Float64 {
+        for(i : Int64 in 0..=n) {
+            a *= (i + 3 * 4)
+        }
+        return a
+    }
+
+
+main() : Int64 {
+    let a = 1 + 2
+    let b = ((3 * 4) + 5) + (a + 4) * 5
+    var c = 31 / 4
+    var d = 114.514 + 11111100000
+    println("abcd is 111111 * 12")
+    return a
+}
+"""
+    @TestCase
+    private func testFoldConstant() {
+        println(CJCodeTool.foldConstant(code))
+    }
+}
