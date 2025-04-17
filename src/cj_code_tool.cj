@@ -48,6 +48,15 @@ class CJCodeTool {
     }
 
     /*
+    处理block
+    */
+    static func procBlock(block : Block) {
+        for(node in block.nodes) {
+            procNode(node)
+        }
+    }
+
+    /*
     处理node
     */
     static func procNode(node: Node) : Unit{
@@ -63,24 +72,18 @@ class CJCodeTool {
             assign_expr.rightExpr = calExpr(assign_expr.rightExpr)
         } else if (node is ForInExpr) {
             var for_in_expr = (node as ForInExpr).getOrThrow()
-            for(inner_node in for_in_expr.block.nodes) {
-                procNode(inner_node)
-            }
+            procBlock(for_in_expr.block)
         } else if (node is WhileExpr) {
             var while_expr = (node as WhileExpr).getOrThrow()
             while_expr.condition = calExpr(while_expr.condition)
-            for(inner_node in while_expr.block.nodes) {
-                procNode(inner_node)
-            }
+            procBlock(while_expr.block)
         } else if (node is IfExpr) {
             var if_expr = (node as IfExpr).getOrThrow()
             if_expr.condition = calExpr(if_expr.condition)
             try {
                 if_expr.elseExpr = calExpr(if_expr.elseExpr)
             } catch (e: ASTException) {}
-            for(inner_node in if_expr.ifBlock.nodes) {
-                procNode(inner_node)
-            }
+            procBlock(if_expr.ifBlock)
         }
     }
 
