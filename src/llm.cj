@@ -1,5 +1,3 @@
-// 本示例演示访问 DeepSeek 大模型
-// 仓颉语言团队 刘俊杰 2025.02.05
 package playground
 
 import std.io.StringReader
@@ -21,7 +19,7 @@ enum Role <: ToString {
 
 class LLM {
     let client: Client
-    let prompt = "Based on the body of the function I gave you, generate a paragraph explaining what the function does. The text must not contain newline characters."
+    let prompt = 'I am going to give you a block of code, first you need to decide whether the block I gave you is a function or a class. If the block of code is a function, you need to tell me the possible meanings of the parameters that the function contains, the possible actions that the function can do, and the return value of the function. If the block of code is a class, you need to tell me the superclass that the class inherits from, the interface that the class inherits from, the properties that the class contains, and a description of the methods that the class contains. Requirements: Your answer must be as short as possible, with newline characters separating each point and no additional content allowed.'
     let history = StringBuilder()
     public LLM(let url!: String, let key!: String, let model!: String,
         let context!: Bool = false) {
@@ -31,7 +29,7 @@ class LLM {
             .tlsConfig(config)
             .readTimeout(Duration.Max) // AI 服务响应有时候比较慢，这里设置为无限等待
             .build()
-        history.append(encode(I, prompt))
+        history.append(encode(I, prompt) + ',')
     }
 
     func encode(role: Role, content: String) {
@@ -59,10 +57,8 @@ class LLM {
     }
 
     func parse(text: String, stream!: Bool = false) {
-        println("text: ${text}")
         let json = JsonValue.fromStr(text).asObject()
         let choices = json.getFields()['choices'].asArray()
-        println("choices: ${choices}")
         // 流式和非流式情况下，这个字段名称不同
         let key = if (stream) { 'delta' } else { 'message' }
         let message = choices[0].asObject().getFields()[key].asObject()
@@ -72,20 +68,11 @@ class LLM {
 
     // 非流式
     public func chat(input: String) {
+        println("chating...")
         let response = send(input)
-        let buffer = Array<Byte>(4096 * 8, item: 0)
-        response.body.read(buffer)
         let output = StringReader(response.body).readToEnd() |> parse
-        println(output)
         return output
     }
-
-    // public func preset(context: Array<(Role, String)>) {
-    //     history.reset()
-    //     for ((role, message) in context) {
-    //         history.append(encode(role, message) + ',')
-    //     }
-    // }
 
     public func reset() {
         history.reset()

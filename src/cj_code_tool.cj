@@ -41,7 +41,6 @@ class CJCodeTool {
                 key: 'sk-pqwthdmbesdwldfllezgjildshqhezpwzjbupqolzijkxjoa',
                 model: 'deepseek-ai/DeepSeek-V3',
                 context: true)
-
             return robot.chat(code)
         }
         // TODO
@@ -52,6 +51,7 @@ class CJCodeTool {
         let col = decl.toTokens().get(0).pos.column
         let line = decl.toTokens().get(0).pos.line
         let ret = getDoc(strDecl)
+        // let ret = "ret"
         var retBuilder = StringBuilder()
         retBuilder.append(addSpace(col, '/*'))
         retBuilder.append(addSpace(col, ret))
