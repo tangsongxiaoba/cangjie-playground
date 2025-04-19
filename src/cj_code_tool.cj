@@ -68,71 +68,68 @@ class CJCodeTool {
     static func foldConstant(str: String) : String {
         var program = str.toProgram()
         for(decl in program.decls) {
-            foldConstant(decl)
+            foldConstForDecl(decl)
         }
         return program.toString()
     }
 
-    private static func foldConstant(decl: Decl): Unit {
+    /*
+    对定义进行折叠常量处理
+    */
+    private static func foldConstForDecl(decl: Decl): Unit {
         if (decl is VarDecl) {
             var ndecl = (decl as VarDecl).getOrThrow()
             try {
-                var expr = ndecl.expr
-                ndecl.expr = calExpr(expr)
+                foldConstForExpr(ndecl.expr)
             } catch (e: ASTException) {
                 return
             }
         }
         else if (decl is FuncDecl) {
             var ndecl = (decl as FuncDecl).getOrThrow()
-            for(node in ndecl.block.nodes) {
-                if (node is Expr) {
-                    var expr = (node as Expr).getOrThrow()
-                    procExpr(expr)
-                }
-            }
+            foldConstForBlock(ndecl.block)
         } else if (decl is ClassDecl) {
             var ndecl = (decl as ClassDecl).getOrThrow()
             for(ddecl in ndecl.body.decls) {
-                foldConstant(ddecl)
+                foldConstForDecl(ddecl)
             }
         }
 
     }
 
     /*
-    处理block
+    对块进行折叠常量处理
     */
-    static func procBlock(block : Block) {
+    static func foldConstForBlock(block : Block) {
         for(node in block.nodes) {
             if (node is Expr) {
                 var expr = (node as Expr).getOrThrow()
-                procExpr(expr)
+                foldConstForExpr(expr)
             }
         }
     }
 
     /*
-    处理node
+    对表达式进行折叠常量处理
     */
-    static func procExpr(expr: Expr) : Unit {
+    static func foldConstForExpr(expr: Expr) : Unit {
         if (expr is AssignExpr) {
             var assign_expr = (expr as AssignExpr).getOrThrow()
             assign_expr.rightExpr = calExpr(assign_expr.rightExpr)
         } else if (expr is ForInExpr) {
             var for_in_expr = (expr as ForInExpr).getOrThrow()
-            procBlock(for_in_expr.block)
+            foldConstForBlock(for_in_expr.block)
         } else if (expr is WhileExpr) {
             var while_expr = (expr as WhileExpr).getOrThrow()
             while_expr.condition = calExpr(while_expr.condition)
-            procBlock(while_expr.block)
+            foldConstForBlock(while_expr.block)
         } else if (expr is IfExpr) {
             var if_expr = (expr as IfExpr).getOrThrow()
             if_expr.condition = calExpr(if_expr.condition)
             try {
                 if_expr.elseExpr = calExpr(if_expr.elseExpr)
             } catch (e: ASTException) {}
-            procBlock(if_expr.ifBlock)
+            foldConstForBlock(if_expr.ifBlock)
         }
     }
 
@@ -202,12 +199,12 @@ class CJCodeTool {
         }
         if(expr is IfExpr) {
             var ifExpr = (expr as IfExpr).getOrThrow()
-            procExpr(ifExpr)
+            foldConstForExpr(ifExpr)
             return expr
         }
         if(expr is Block) {
             var block = (expr as Block).getOrThrow()
-            procBlock(block)
+            foldConstForBlock(block)
             return expr
         }
         return expr
