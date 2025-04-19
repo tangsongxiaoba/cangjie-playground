@@ -62,28 +62,26 @@ class CJCodeTool {
         return programTokens.insert(index, cangjieLex(retBuilder.toString())).toString()
     }
 
-    
-
     /*
     折叠常量
     */
     static func foldConstant(str: String) : String {
         var program = str.toProgram()
         for(decl in program.decls) {
-            if (decl is MainDecl) {
-                var ndecl = (decl as MainDecl).getOrThrow()
-                for(node in ndecl.block.nodes) {
-                    procNode(node)
-                }
-            } else if (decl is FuncDecl) {
+            if (decl is FuncDecl) {
                 var ndecl = (decl as FuncDecl).getOrThrow()
                 for(node in ndecl.block.nodes) {
                     procNode(node)
                 }
             } else if (decl is ClassDecl) {
-                var ndecl = (decl as FuncDecl).getOrThrow()
-                for(node in ndecl.block.nodes) {
-                    procNode(node)
+                var ndecl = (decl as ClassDecl).getOrThrow()
+                for(ddecl in ndecl.body.decls) {
+                    if (ddecl is FuncDecl) {
+                        var dndecl = (ddecl as FuncDecl).getOrThrow()
+                        for (node in dndecl.block.nodes) {
+                            procNode(node)
+                        }
+                    }
                 }
             }
         }
@@ -234,6 +232,9 @@ class CJCodeTool {
         return subDecl
     }
 
+    /*
+    将路径根据“.”划分成字符串数组。
+    */
     static func splitPath(path: String): Array<String> {
         return path.split(".", removeEmpty: true)
     }
