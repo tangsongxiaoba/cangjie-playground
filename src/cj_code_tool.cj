@@ -68,24 +68,36 @@ class CJCodeTool {
     static func foldConstant(str: String) : String {
         var program = str.toProgram()
         for(decl in program.decls) {
-            if (decl is FuncDecl) {
-                var ndecl = (decl as FuncDecl).getOrThrow()
-                for(node in ndecl.block.nodes) {
-                    procNode(node)
-                }
-            } else if (decl is ClassDecl) {
-                var ndecl = (decl as ClassDecl).getOrThrow()
-                for(ddecl in ndecl.body.decls) {
-                    if (ddecl is FuncDecl) {
-                        var dndecl = (ddecl as FuncDecl).getOrThrow()
-                        for (node in dndecl.block.nodes) {
-                            procNode(node)
-                        }
-                    }
-                }
-            }
+            foldConstant(decl)
         }
         return program.toString()
+    }
+
+    private static func foldConstant(decl: Decl): Unit {
+        if (decl is VarDecl) {
+            var ndecl = (decl as VarDecl).getOrThrow()
+            try {
+                var expr = ndecl.expr
+                ndecl.expr = calExpr(expr)
+            } catch (e: ASTException) {
+                return
+            }
+        }
+        else if (decl is FuncDecl) {
+            var ndecl = (decl as FuncDecl).getOrThrow()
+            for(node in ndecl.block.nodes) {
+                if (node is Expr) {
+                    var expr = (node as Expr).getOrThrow()
+                    procExpr(expr)
+                }
+            }
+        } else if (decl is ClassDecl) {
+            var ndecl = (decl as ClassDecl).getOrThrow()
+            for(ddecl in ndecl.body.decls) {
+                foldConstant(ddecl)
+            }
+        }
+
     }
 
     /*
@@ -93,33 +105,29 @@ class CJCodeTool {
     */
     static func procBlock(block : Block) {
         for(node in block.nodes) {
-            procNode(node)
+            if (node is Expr) {
+                var expr = (node as Expr).getOrThrow()
+                procExpr(expr)
+            }
         }
     }
 
     /*
     处理node
     */
-    static func procNode(node: Node) : Unit{
-        if(node is VarDecl) {
-            var var_decl = (node as VarDecl).getOrThrow()
-            try {
-                var_decl.expr = calExpr(var_decl.expr)
-            } catch(e: ASTException) {
-                return
-            }
-        } else if (node is AssignExpr) {
-            var assign_expr = (node as AssignExpr).getOrThrow()
+    static func procExpr(expr: Expr) : Unit {
+        if (expr is AssignExpr) {
+            var assign_expr = (expr as AssignExpr).getOrThrow()
             assign_expr.rightExpr = calExpr(assign_expr.rightExpr)
-        } else if (node is ForInExpr) {
-            var for_in_expr = (node as ForInExpr).getOrThrow()
+        } else if (expr is ForInExpr) {
+            var for_in_expr = (expr as ForInExpr).getOrThrow()
             procBlock(for_in_expr.block)
-        } else if (node is WhileExpr) {
-            var while_expr = (node as WhileExpr).getOrThrow()
+        } else if (expr is WhileExpr) {
+            var while_expr = (expr as WhileExpr).getOrThrow()
             while_expr.condition = calExpr(while_expr.condition)
             procBlock(while_expr.block)
-        } else if (node is IfExpr) {
-            var if_expr = (node as IfExpr).getOrThrow()
+        } else if (expr is IfExpr) {
+            var if_expr = (expr as IfExpr).getOrThrow()
             if_expr.condition = calExpr(if_expr.condition)
             try {
                 if_expr.elseExpr = calExpr(if_expr.elseExpr)
@@ -194,7 +202,7 @@ class CJCodeTool {
         }
         if(expr is IfExpr) {
             var ifExpr = (expr as IfExpr).getOrThrow()
-            procNode(ifExpr)
+            procExpr(ifExpr)
             return expr
         }
         if(expr is Block) {

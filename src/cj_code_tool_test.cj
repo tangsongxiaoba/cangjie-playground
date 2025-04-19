@@ -46,12 +46,27 @@ public func testC() {
 class FoldConstantTest {
     private let code = 
 """
-func myfunc(a: Float64, n: Int64) : Float64 {
+interface I1 {
+    mut prop size: Int64
+}
+
+class C <: I1 {
+    private var mySize = 1*2
+
+    func myfunc(a: Float64, n: Int64) : Float64 {
         for(i : Int64 in 0..=n) {
-            a *= (i + 3 * 4)
+            a *= (i + 2 * 42)
         }
         return a
     }
+}
+
+func myfunc(a: Float64, n: Int64) : Float64 {
+    for(i : Int64 in 0..=n) {
+        a *= (i + 3 * 4)
+    }
+    return a
+}
 
 
 main() : Int64 {
