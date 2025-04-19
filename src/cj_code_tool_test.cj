@@ -3,7 +3,7 @@ package playground
 import std.ast.*
 
 @Test
-class CJCodeToolTest {
+class FindDeclByPathTest {
     private let code = """
 interface I1 {
     mut prop size: Int64
@@ -34,7 +34,7 @@ public func testC() {
 """
 
     @TestCase
-    private func testFtindDeclByPah() {
+    private func testFindDeclByPath() {
         let prog = code.toProgram()
         let paths = CJCodeTool.splitPath("C.getSize")
         let decl = CJCodeTool.findDeclByPath(prog, paths)
