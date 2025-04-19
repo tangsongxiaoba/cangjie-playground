@@ -2,4 +2,4 @@
 target/
 .cache/
 .arts/
-./src/cj_code_tool_test.cj.macrocall
+*.macrocall
