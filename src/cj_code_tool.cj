@@ -6,7 +6,33 @@ import std.convert.*
 
 class CJCodeTool {
     static func generateCodeSignature(code: String): String {
-        // TODO
+        var braceStack = 0
+        var name = ""
+        var body = ""
+        for (char in code) {
+            var runeChar = Rune(char)
+            if (runeChar == r'{') {
+                braceStack++
+                body += runeChar.toString()
+            } else if (runeChar == r'}') {
+                braceStack--
+                body += runeChar.toString()
+                if (braceStack == 0) {
+                    println("=====name=====")
+                    println(name)
+                    println("=====body=====")
+                    println(body)
+                    name = ""
+                    body = ""
+                }
+            } else {
+                if (braceStack == 0) {
+                    name += runeChar.toString()
+                } else {
+                    body += runeChar.toString()
+                }  
+            }
+        }
         return code
     }
 
