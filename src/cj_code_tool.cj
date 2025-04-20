@@ -17,12 +17,14 @@ class CJCodeTool {
 
     static func generateDocument(code: String, path: String): String {
         func addSpace(n: Int32, str: String) : StringBuilder {
+            let strList = str.split('\n')
             var tempBuilder = StringBuilder()
-            for(i in 1..n) {
-                tempBuilder.append(' ')
+            for(str in strList) {
+                for(i in 1..n) {
+                    tempBuilder.append(' ')
+                }
+                tempBuilder.append(str + '\n')
             }
-            tempBuilder.append(str)
-            tempBuilder.append('\n')
             return tempBuilder
         }
         func getIndex(tokens: Tokens, decl: Decl) : Option<Int64> {
