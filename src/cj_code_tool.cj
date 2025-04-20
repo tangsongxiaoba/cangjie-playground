@@ -67,6 +67,7 @@ class CJCodeTool {
     */
     static func foldConstant(str: String) : String {
         var program = str.toProgram()
+        program.dump()
         for(decl in program.decls) {
             foldConstForDecl(decl)
         }
@@ -80,7 +81,7 @@ class CJCodeTool {
         if (decl is VarDecl) {
             var ndecl = (decl as VarDecl).getOrThrow()
             try {
-                foldConstForExpr(ndecl.expr)
+                ndecl.expr = foldConstForExpr(ndecl.expr)
             } catch (e: ASTException) {
                 return
             }
@@ -104,7 +105,7 @@ class CJCodeTool {
         for(node in block.nodes) {
             if (node is Expr) {
                 var expr = (node as Expr).getOrThrow()
-                foldConstForExpr(expr)
+                expr = foldConstForExpr(expr)
             }
         }
     }
@@ -112,25 +113,35 @@ class CJCodeTool {
     /*
     对表达式进行折叠常量处理
     */
-    static func foldConstForExpr(expr: Expr) : Unit {
+    static func foldConstForExpr(expr: Expr) : Expr {
+        if (expr is BinaryExpr) {
+            var binary_expr = (expr as BinaryExpr).getOrThrow()
+            binary_expr.leftExpr = foldConstForExpr(binary_expr.leftExpr)
+            binary_expr.rightExpr = foldConstForExpr(binary_expr.rightExpr)
+            return calExpr(binary_expr)
+        }
         if (expr is AssignExpr) {
             var assign_expr = (expr as AssignExpr).getOrThrow()
-            assign_expr.rightExpr = calExpr(assign_expr.rightExpr)
+            assign_expr.rightExpr = foldConstForExpr(assign_expr.rightExpr)
         } else if (expr is ForInExpr) {
             var for_in_expr = (expr as ForInExpr).getOrThrow()
             foldConstForBlock(for_in_expr.block)
         } else if (expr is WhileExpr) {
             var while_expr = (expr as WhileExpr).getOrThrow()
-            while_expr.condition = calExpr(while_expr.condition)
+            while_expr.condition = foldConstForExpr(while_expr.condition)
             foldConstForBlock(while_expr.block)
         } else if (expr is IfExpr) {
             var if_expr = (expr as IfExpr).getOrThrow()
-            if_expr.condition = calExpr(if_expr.condition)
+            if_expr.condition = foldConstForExpr(if_expr.condition)
             try {
-                if_expr.elseExpr = calExpr(if_expr.elseExpr)
+                if_expr.elseExpr = foldConstForExpr(if_expr.elseExpr)
             } catch (e: ASTException) {}
             foldConstForBlock(if_expr.ifBlock)
+        } else if (expr is ParenExpr) {
+            var paren_expr = (expr as ParenExpr).getOrThrow()
+            paren_expr.parenthesizedExpr = foldConstForExpr(paren_expr.parenthesizedExpr)
         }
+        return expr
     }
 
     /*
@@ -142,8 +153,8 @@ class CJCodeTool {
         }
         if(expr is BinaryExpr) {
             var binaryExpr = (expr as BinaryExpr).getOrThrow()
-            var leftExpr = calExpr(binaryExpr.leftExpr)
-            var rightExpr = calExpr(binaryExpr.rightExpr)
+            var leftExpr = binaryExpr.leftExpr
+            var rightExpr = binaryExpr.rightExpr
             
             if(leftExpr is LitConstExpr && rightExpr is LitConstExpr) {
                 var leftExpr = (leftExpr as LitConstExpr).getOrThrow()
@@ -181,6 +192,7 @@ class CJCodeTool {
                     return LitConstExpr(quote($(int_constant)))
                 }
                 else {
+                    // ILLEGAL INPUT
                     return expr
                 }
             }
@@ -192,20 +204,6 @@ class CJCodeTool {
                 binaryExpr.rightExpr = (rightExpr as LitConstExpr).getOrThrow()
             }
             return binaryExpr
-        }
-        if(expr is ParenExpr) {
-            var parenExpr = (expr as ParenExpr).getOrThrow()
-            return calExpr(parenExpr.parenthesizedExpr)
-        }
-        if(expr is IfExpr) {
-            var ifExpr = (expr as IfExpr).getOrThrow()
-            foldConstForExpr(ifExpr)
-            return expr
-        }
-        if(expr is Block) {
-            var block = (expr as Block).getOrThrow()
-            foldConstForBlock(block)
-            return expr
         }
         return expr
     }
