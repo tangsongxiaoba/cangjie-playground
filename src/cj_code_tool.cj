@@ -145,6 +145,20 @@ class CJCodeTool {
         } else if (expr is ParenExpr) {
             var paren_expr = (expr as ParenExpr).getOrThrow()
             paren_expr.parenthesizedExpr = foldConstForExpr(paren_expr.parenthesizedExpr)
+        } else if (expr is ReturnExpr) {
+            var ret_expr = (expr as ReturnExpr).getOrThrow()
+            ret_expr.expr = foldConstForExpr(ret_expr.expr)
+        } else if (expr is RangeExpr) {
+            var range_expr = (expr as RangeExpr).getOrThrow()
+            try{
+                range_expr.start = foldConstForExpr(range_expr.start)
+            } catch(e: ASTException) {}
+            try{
+                range_expr.end = foldConstForExpr(range_expr.end)
+            } catch(e: ASTException) {}
+            try{
+                range_expr.step = foldConstForExpr(range_expr.step)
+            } catch(e: ASTException) {}
         }
         return expr
     }
