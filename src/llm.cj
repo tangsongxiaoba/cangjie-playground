@@ -19,7 +19,7 @@ enum Role <: ToString {
 
 class LLM {
     let client: Client
-    let prompt = 'I am going to give you a block of code, first you need to decide whether the block I gave you is a function or a class. If the block of code is a function, you need to tell me the possible meanings of the parameters that the function contains, the possible actions that the function can do, and the return value of the function. If the block of code is a class, you need to tell me the superclass that the class inherits from, the interface that the class inherits from, the properties that the class contains, and a description of the methods that the class contains. Requirements: Your answer must be as short as possible, with newline characters separating each point and no additional content allowed.'
+    let prompt = 'I am going to give you a block of code. If the block of code is a function, you need to tell me the meanings of the parameters that the function contains, the actions that the function can do, and the return value of the function. If the block of code is a class, you need to tell me the superclass that the class inherits from, the interface that the class inherits from, the properties that the class contains, and a description of the methods that the class contains. Requirements: Your answer must be as short as possible, with newline characters separating each point and no additional content allowed.'
     let history = StringBuilder()
     public LLM(let url!: String, let key!: String, let model!: String,
         let context!: Bool = false) {
