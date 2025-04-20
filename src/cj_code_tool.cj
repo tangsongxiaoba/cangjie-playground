@@ -165,8 +165,13 @@ class CJCodeTool {
             try{
                 range_expr.step = foldConstForExpr(range_expr.step)
             } catch(e: ASTException) {}
+        } else if (expr is UnaryExpr || expr is RefExpr) {
+            // No need to fold?
         }
-        // ILLEGAL INPUT
+        else {
+            // unexpected expression type
+            throw IllegalArgumentException()
+        }
         return expr
     }
 
@@ -218,8 +223,8 @@ class CJCodeTool {
                     return LitConstExpr(quote($(int_constant)))
                 }
                 else {
-                    // ILLEGAL INPUT
-                    return expr
+                    // unexpected calculation mode
+                    throw IllegalArgumentException()
                 }
             }
 
