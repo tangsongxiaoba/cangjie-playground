@@ -89,7 +89,8 @@ class CJCodeTool {
         else if (decl is FuncDecl) {
             var ndecl = (decl as FuncDecl).getOrThrow()
             foldConstForBlock(ndecl.block)
-        } else if (decl is ClassDecl) {
+        } 
+        else if (decl is ClassDecl) {
             var ndecl = (decl as ClassDecl).getOrThrow()
             for(ddecl in ndecl.body.decls) {
                 foldConstForDecl(ddecl)
@@ -106,6 +107,10 @@ class CJCodeTool {
             if (node is Expr) {
                 var expr = (node as Expr).getOrThrow()
                 expr = foldConstForExpr(expr)
+            }
+            else if (node is Decl) {
+                var decl = (node as Decl).getOrThrow()
+                foldConstForDecl(decl)
             }
         }
     }
