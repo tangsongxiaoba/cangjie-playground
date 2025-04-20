@@ -119,12 +119,21 @@ class CJCodeTool {
     对表达式进行折叠常量处理
     */
     static func foldConstForExpr(expr: Expr) : Expr {
+        if (expr is LitConstExpr) {
+            return expr
+        }
         if (expr is BinaryExpr) {
             var binary_expr = (expr as BinaryExpr).getOrThrow()
             binary_expr.leftExpr = foldConstForExpr(binary_expr.leftExpr)
             binary_expr.rightExpr = foldConstForExpr(binary_expr.rightExpr)
             return calExpr(binary_expr)
         }
+        if (expr is ParenExpr) {
+            var paren_expr = (expr as ParenExpr).getOrThrow()
+            paren_expr.parenthesizedExpr = foldConstForExpr(paren_expr.parenthesizedExpr)
+            return calExpr(paren_expr.parenthesizedExpr)
+        }
+
         if (expr is AssignExpr) {
             var assign_expr = (expr as AssignExpr).getOrThrow()
             assign_expr.rightExpr = foldConstForExpr(assign_expr.rightExpr)
@@ -142,9 +151,6 @@ class CJCodeTool {
                 if_expr.elseExpr = foldConstForExpr(if_expr.elseExpr)
             } catch (e: ASTException) {}
             foldConstForBlock(if_expr.ifBlock)
-        } else if (expr is ParenExpr) {
-            var paren_expr = (expr as ParenExpr).getOrThrow()
-            paren_expr.parenthesizedExpr = foldConstForExpr(paren_expr.parenthesizedExpr)
         } else if (expr is ReturnExpr) {
             var ret_expr = (expr as ReturnExpr).getOrThrow()
             ret_expr.expr = foldConstForExpr(ret_expr.expr)
@@ -160,6 +166,7 @@ class CJCodeTool {
                 range_expr.step = foldConstForExpr(range_expr.step)
             } catch(e: ASTException) {}
         }
+        // ILLEGAL INPUT
         return expr
     }
 
