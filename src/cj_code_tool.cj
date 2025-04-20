@@ -67,7 +67,6 @@ class CJCodeTool {
     */
     static func foldConstant(str: String) : String {
         var program = str.toProgram()
-        program.dump()
         for(decl in program.decls) {
             foldConstForDecl(decl)
         }
