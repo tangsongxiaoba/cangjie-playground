@@ -6,34 +6,31 @@ import std.convert.*
 
 class CJCodeTool {
     static func generateCodeSignature(code: String): String {
-        var braceStack = 0
-        var name = ""
-        var body = ""
-        for (char in code) {
-            var runeChar = Rune(char)
-            if (runeChar == r'{') {
-                braceStack++
-                body += runeChar.toString()
-            } else if (runeChar == r'}') {
-                braceStack--
-                body += runeChar.toString()
-                if (braceStack == 0) {
-                    println("=====name=====")
-                    println(name)
-                    println("=====body=====")
-                    println(body)
-                    name = ""
-                    body = ""
-                }
-            } else {
-                if (braceStack == 0) {
-                    name += runeChar.toString()
-                } else {
-                    body += runeChar.toString()
-                }  
+        var signature = Tokens()
+        let tks = cangjieLex(code)
+        var start = 0
+        while (start < tks.size) {
+            let (decl, mid) = parseDeclFragment(tks, startFrom: start)
+            start = mid
+
+            for (m in decl.modifiers) { // modifiers can be null
+                signature += m.toTokens()
             }
+            let keywordStr = decl.keyword.toTokens().toString()
+            signature += decl.keyword.toTokens()
+            signature += decl.identifier.toTokens()
+            if (keywordStr == "class" || keywordStr == "interface") {
+                // TODO: <: and &
+            } else if (keywordStr == "func") {
+                try {
+                    signature += decl.genericParam.toTokens()
+                } catch (e: ASTException) {}
+
+            }
+            // signature += decl.toTokens().toString()
+            signature += Token(TokenKind.NL) // add "\n"
         }
-        return code
+        return signature.toString()
     }
 
     static func refractorVariable(code: String, path: String, oldName: String, newName: String): String {
