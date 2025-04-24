@@ -10,27 +10,183 @@ class CJCodeTool {
         let tks = cangjieLex(code)
         var start = 0
         while (start < tks.size) {
-            let (decl, mid) = parseDeclFragment(tks, startFrom: start)
-            start = mid
+            try {
+                let (decl, mid) = parseDeclFragment(tks, startFrom: start)
+                start = mid 
 
-            for (m in decl.modifiers) { // modifiers can be null
-                signature += m.toTokens()
-            }
-            let keywordStr = decl.keyword.toTokens().toString()
-            signature += decl.keyword.toTokens()
-            signature += decl.identifier.toTokens()
-            if (keywordStr == "class" || keywordStr == "interface") {
-                // TODO: <: and &
-            } else if (keywordStr == "func") {
-                try {
-                    signature += decl.genericParam.toTokens()
-                } catch (e: ASTException) {}
+                for (m in decl.modifiers) { // modifiers can be null
+                    signature += m.toTokens()
+                }
+                let keywordStr = decl.keyword.toString()
+                signature += decl.keyword
+                signature += decl.identifier
 
+                if (keywordStr == "class") {
+                    signature += parseClassDecl(decl)
+                } else if (keywordStr == "interface") {
+                    signature += parseInterfaceDecl(decl)
+                } else if (keywordStr == "func") {
+                    signature += parseFuncDecl(decl)
+                }
+            } catch (e: ParseASTException) {
+                return "ILLEGAL INPUT"
             }
-            // signature += decl.toTokens().toString()
-            signature += Token(TokenKind.NL) // add "\n"
+            
+            if (start < tks.size) {
+                signature += Token(TokenKind.NL) // add "\n"
+                signature += Token(TokenKind.NL)
+            }
         }
         return signature.toString()
+    }
+
+    private static func parseClassDecl(decl: Decl): Tokens {
+        var signature = Tokens()
+        let classDecl = decl as ClassDecl
+        match (classDecl) {
+            case Some(classDecl) => 
+                let superTypes = classDecl.superTypes // superTypes can be null
+                if (superTypes.size > 0) {
+                    signature += classDecl.upperBound
+                    var hasSuperTypeBitAnds = false
+                    for (s in superTypes) {
+                        if (hasSuperTypeBitAnds) {
+                            signature += classDecl.superTypeBitAnds[0]
+                        }
+                        signature += s.toTokens()
+                        hasSuperTypeBitAnds = true
+                    }
+                }
+
+                let body = classDecl.body
+                if (body.decls.size > 0) {
+                    signature += body.lBrace
+                    signature += Token(TokenKind.NL)
+                    let bodyDecls = body.decls
+                    signature += parseBodyDecls(bodyDecls)
+                    signature += Token(TokenKind.NL)
+                    signature += body.rBrace
+                }
+            case None => 
+                throw ASTException("decl is not a classDecl")
+        }
+
+        return signature
+    }
+
+    private static func parseInterfaceDecl(decl: Decl): Tokens {
+        var signature = Tokens()
+        let interfaceDecl = decl as InterfaceDecl
+        match (interfaceDecl) {
+            case Some(interfaceDecl) => 
+                let superTypes = interfaceDecl.superTypes // superTypes can be null
+                if (superTypes.size > 0) {
+                    signature += interfaceDecl.upperBound
+                    var hasSuperTypeBitAnds = false
+                    for (s in superTypes) {
+                        if (hasSuperTypeBitAnds) {
+                            signature += interfaceDecl.superTypeBitAnds[0]
+                        }
+                        signature += s.toTokens()
+                        hasSuperTypeBitAnds = true
+                    }
+                }
+
+                let body = interfaceDecl.body
+                if (body.decls.size > 0) {
+                    signature += body.lBrace
+                    signature += Token(TokenKind.NL)
+                    let bodyDecls = body.decls
+                    signature += parseBodyDecls(bodyDecls)
+                    signature += Token(TokenKind.NL)
+                    signature += body.rBrace
+                }
+            case None => 
+                throw ASTException("decl is not a interfaceDecl")
+        }
+        return signature
+    }
+
+    private static func parseFuncDecl(decl: Decl): Tokens {
+        var signature = Tokens()
+        let funcDecl = decl as FuncDecl
+            match (funcDecl) {
+            case Some(funcDecl) =>
+                signature += funcDecl.lParen
+                let FuncParams = funcDecl.funcParams // funcParams can be null
+                if (FuncParams.size > 0) {
+                    for (p in FuncParams) {
+                        signature += p.toTokens()
+                    }
+                }
+                signature += funcDecl.rParen
+                try {
+                    let declType = funcDecl.declType // declType can be null
+                    signature += funcDecl.colon
+                    signature += declType.toTokens()
+                } catch (e: ASTException) {}
+            case None =>
+                throw ASTException("decl is not a funcDecl")
+        }
+        return signature
+    }
+
+    private static func parseBodyDecls(decls: ArrayList<Decl>): Tokens {
+        var signature = Tokens()
+        var isFirstDecl = true
+        for (decl in decls) {
+            if (!isFirstDecl) {
+                signature += Token(TokenKind.NL)
+                signature += Token(TokenKind.NL)
+            }
+            isFirstDecl = false
+            for (m in decl.modifiers) {
+                signature += m.toTokens() // modifiers can be null
+            }
+            let keywordStr = decl.keyword.toString()
+            signature += decl.keyword
+            signature += decl.identifier
+            if (keywordStr == "var") {
+                signature += parseVarDecl(decl)
+            } else if (keywordStr == "prop") {
+                signature += parsePropDecl(decl)
+            } else if (keywordStr == "func") {
+                signature += parseFuncDecl(decl)
+            } 
+        }
+        return signature
+    }
+
+    private static func parseVarDecl(decl: Decl): Tokens {
+        var signature = Tokens()
+        let varDecl = decl as VarDecl
+        match (varDecl) {
+            case Some(varDecl) =>
+                try {
+                    let declType = varDecl.declType // declType can be null
+                    signature += varDecl.colon
+                    signature += declType.toTokens()
+                } catch (e: ASTException) {}
+            case None =>
+                throw ASTException("decl is not a varDecl")
+        }
+        return signature
+    }
+
+    private static func parsePropDecl(decl: Decl): Tokens {
+        var signature = Tokens()
+        let propDecl = decl as PropDecl
+        match (propDecl) {
+            case Some(propDecl) =>
+                try {
+                    let declType = propDecl.declType // declType can be null
+                    signature += propDecl.colon
+                    signature += declType.toTokens()
+                } catch (e: ASTException) {}
+            case None =>
+                throw ASTException("decl is not a propDecl")
+        }
+        return signature
     }
 
     static func refractorVariable(code: String, path: String, oldName: String, newName: String): String {
