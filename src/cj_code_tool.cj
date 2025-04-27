@@ -5,6 +5,12 @@ import std.collection.*
 import std.convert.*
 
 class CJCodeTool {
+    private static func debug(string: String) {
+        if (true) {
+            println(string)
+        }
+    }
+
     static func generateCodeSignature(code: String): String {
         var signature = Tokens()
         let tks = cangjieLex(code)
@@ -17,18 +23,22 @@ class CJCodeTool {
                 for (m in decl.modifiers) { // modifiers can be null
                     signature += m.toTokens()
                 }
-                let keywordStr = decl.keyword.toString()
                 signature += decl.keyword
                 signature += decl.identifier
 
-                if (keywordStr == "class") {
+                if (decl is ClassDecl) {
+                    debug("decl is ClassDecl")
                     signature += parseClassDecl(decl)
-                } else if (keywordStr == "interface") {
+                } else if (decl is InterfaceDecl) {
+                    debug("decl is InterfaceDecl")
                     signature += parseInterfaceDecl(decl)
-                } else if (keywordStr == "func") {
+                } else if (decl is FuncDecl) {
+                    debug("decl is FuncDecl")
                     signature += parseFuncDecl(decl)
+                } else {
+                    throw Exception("decl is unknown")
                 }
-            } catch (e: ParseASTException) {
+            } catch (e: Exception) {
                 return "ILLEGAL INPUT"
             }
             
@@ -142,17 +152,32 @@ class CJCodeTool {
             isFirstDecl = false
             for (m in decl.modifiers) {
                 signature += m.toTokens() // modifiers can be null
+                debug("modifier is " + m.toTokens().toString())
             }
-            let keywordStr = decl.keyword.toString()
-            signature += decl.keyword
-            signature += decl.identifier
-            if (keywordStr == "var") {
+            if (decl.keyword.toString() == decl.identifier.toString()) {
+                // keyword and identifier are the same: "init"
+                signature += decl.keyword
+            } else {
+                signature += decl.keyword
+                debug("keyword is " + decl.keyword.toString())
+                signature += decl.identifier
+                debug("identifier is " + decl.identifier.toString())
+            }
+            if (decl is VarDecl) {
+                debug("decl is VarDecl")
                 signature += parseVarDecl(decl)
-            } else if (keywordStr == "prop") {
+            } else if (decl is PropDecl) {
+                debug("decl is PropDecl")
                 signature += parsePropDecl(decl)
-            } else if (keywordStr == "func") {
+            } else if (decl is FuncDecl) {
+                debug("decl is FuncDecl")
                 signature += parseFuncDecl(decl)
-            } 
+            } else {
+                if (decl is PrimaryCtorDecl) {
+                    debug("decl is PrimaryCtorDecl")
+                }
+                throw Exception("decl is unknow")
+            }
         }
         return signature
     }
@@ -585,12 +610,6 @@ class CJCodeTool {
                 refractorExpr(unaryExpr.expr, oldName, newName)
             case None =>
                 throw ASTException("node is not an unaryExpr")
-        }
-    }
-
-    private static func debug(string: String) {
-        if (false) {
-            println(string)
         }
     }
 

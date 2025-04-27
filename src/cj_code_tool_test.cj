@@ -1,6 +1,28 @@
 package playground
 
 import std.ast.*
+import std.fs.*
+
+func readFile(): String {
+    let file = File.openRead("src/Cangjie-Examples-a/BTree/class.cj")
+    let bytes = file.readToEnd()
+    var code = ""
+    for (byte in bytes) {
+        code += Rune(byte).toString()
+    }
+    return code
+}
+
+@Test
+class GenerateCodeSignatureTest {
+    private let code = readFile()
+
+    @TestCase
+    private func testGenerateCodeSignature() {
+        let sig = CJCodeTool.generateCodeSignature(code)
+        println(sig)
+    }
+}
 
 @Test
 class FindDeclByPathTest {
