@@ -609,32 +609,34 @@ class CJCodeTool {
             return robot.chat(code)
         }
 
-        try{
-            var program = code.toProgram()
-            var programTokens = program.toTokens()
-            var decl = findDeclByPath(program, splitPath(path))
-            
-            let col = decl.toTokens().get(0).pos.column
-            let line = decl.toTokens().get(0).pos.line
-            let index : Int64 = getIndex(programTokens, decl) ?? throw Exception("cannot get index of decl")
-            let preline = getPreLine(index, programTokens)
+    
+    try{
+        var program = code.toProgram()
+        var programTokens = program.toTokens()
+        var decl = findDeclByPath(program, splitPath(path))
 
-            var retBuilder = StringBuilder()
-            for(i in 1..line-preline) {
-                retBuilder.append('\n')
-            }
+        let col = decl.toTokens().get(0).pos.column
+        let line = decl.toTokens().get(0).pos.line
+        let index : Int64 = getIndex(programTokens, decl) ?? throw Exception("cannot get index of decl")
+        let preline = getPreLine(index, programTokens)
 
-            var strDecl = decl.toTokens().toString()
-            let ret = getDoc(strDecl)
-            retBuilder.append(addSpace(col, '/*'))
-            retBuilder.append(addSpace(col, ret))
-            retBuilder.append(addSpace(col, '*/'))
-
-            return programTokens.insert(index, cangjieLex(retBuilder.toString())).toString()
-        } catch(e: Exception) {
-            return "ILLEGAL INPUT"
+        var retBuilder = StringBuilder()
+        for(i in 1..line-preline) {
+            retBuilder.append('\n')
         }
-        
+
+        var strDecl = decl.toTokens().toString()
+        let ret = getDoc(strDecl)
+        retBuilder.append(addSpace(col, '/*'))
+        retBuilder.append(addSpace(col, ret))
+        retBuilder.append(addSpace(col, '*/'))
+
+        return programTokens.insert(index, cangjieLex(retBuilder.toString())).toString()
+        } catch(e: IllegalInputException) {
+            e.message
+        } catch(e: Exception) {
+            throw e
+        }
     }
 
     /*
