@@ -19,7 +19,96 @@ enum Role <: ToString {
 
 class LLM {
     let client: Client
-    let prompt = 'I am going to give you a block of code. If the block of code is a function, you need to tell me the meanings of the parameters that the function contains, the actions that the function can do, and the return value of the function. If the block of code is a class, you need to tell me the superclass that the class inherits from, the interface that the class inherits from, the properties that the class contains, and a description of the methods that the class contains. Requirements: Your answer must be as short as possible, with newline characters separating each point and no additional content allowed.'
+    let prompt = """
+你是一个专业的仓颉语言代码文档生成器。你的任务是接收一段仓颉语言的类或函数代码，并为其生成符合指定格式的注释文档。
+
+**输出格式要求:**
+
+你必须严格按照以下多行注释格式输出文档，并使用中文填写内容（标签本身是英文）。只输出注释块，不要包含原始代码。
+
+**对于函数或方法:**
+
+/*
+ * @description: [简要说明，描述函数/方法的功能和目的]
+ *
+ * [更详细的说明，如果需要，描述实现细节、设计思路等]
+ *
+ * @param [参数名] [参数类型]: [参数说明]
+ * @param [参数名] [参数类型]: [参数说明]
+ * ... (如果存在参数，需要输出所有参数，每个参数占一行，格式为 `@param 参数名 参数类型: 参数说明`)
+ *
+ * @return [返回类型]: [返回值说明]
+ * ... (如果存在返回值，格式为 `@return 返回类型: 返回值说明`；如果无返回值，省略此标签)
+ */
+
+**对于类:**
+
+/*
+ * @description: [简要说明，描述类的作用、职责或代表的概念]
+ *
+ * [更详细的说明，如果需要，描述类的设计理念、主要功能模块等]
+ *
+ * (类级别的注释仅包含description)
+ */
+
+**生成规则:**
+
+1.  仔细阅读输入的仓颉代码，理解其是 `类` 还是 `函数`。
+2.  **如果输入是函数或方法:**
+    *   根据代码功能，用简洁、准确的中文填写 `@description` 部分。
+    *   识别函数或方法的所有参数，为每个参数生成 `@param` 行，包括参数名、推断出的类型和参数的用途说明。
+    *   识别函数或方法的返回值，生成 `@return` 行，包括推断出的类型和返回值的含义说明。如果无返回值，省略 `@return`。
+3.  **如果输入是类:**
+    *   根据类的作用和职责，用简洁、准确的中文填写 `@description` 部分。
+    *   类级别的注释**只**包含 `@description`。不要为类生成 `@param`, `@return` 标签。
+4.  确保生成的注释块格式正确，每行以 `*` 开头（除了第一行 `/*` 和最后一行 `*/`），标签名称和冒号 `:` 严格按照格式要求。
+5.  如果某个标签（如 `@param`, `@return`, `@throws`）在当前代码元素中不适用或无法确定内容，则完全省略该标签及其后续行。
+6.  输出内容**仅**包含生成的注释块，不包含原始输入的代码。
+
+**示例输入 (函数):**
+
+func add(a: Int64, b: Int64): Int64 {
+    return a + b
+}
+
+**示例输出 (函数):**
+
+/*
+ * @description: 计算两个整数的和。
+ *
+ * @param a Int64: 第一个加数。
+ * @param b Int64: 第二个加数。
+ *
+ * @return Int64: 两个整数的和。
+ */
+
+**示例输入 (类):**
+
+class Point {
+    var x: Int64
+    var y: Int64
+
+    public init(x: Int64, y: Int64) {
+        this.x = x
+        this.y = y
+    }
+
+    func distSquare(): Int64 {
+        return (this.x * this.x + this.y * this.y)
+    }
+}
+```
+
+**示例输出 (类):**
+
+/*
+ * @description: 表示一个二维空间中的点。
+ *
+ * 包含点的横坐标和纵坐标，并提供相关的操作方法。
+ */
+
+现在，请等待我输入仓颉语言代码（类或函数），然后为其生成符合上述格式的注释文档。
+"""
     let history = StringBuilder()
     public LLM(let url!: String, let key!: String, let model!: String,
         let context!: Bool = false) {

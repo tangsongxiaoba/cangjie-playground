@@ -17,27 +17,27 @@ class C <: I1 {
         }
         return a
     }
-}
 
-func myfunc(a: Float64, n: Int64) : Float64 {
-    for(i in 0..=n) {
-        a *= (i + 3 * 4)
+    func myfunc(a: Float64, n: Int64) : Float64 {
+        for(i in 0..=n) {
+            a *= (i + 3 * 4)
+        }
+        let a = 1 + 2
+        let b = ((3 * 4) + 5) + (a + 4) * (5 * 3 + 9)
+        var c = 31 / 4
+        var d = 114.514 + 111111000
+        return a / ((2.5 * 100) + 4 * a + 4)
     }
-    let a = 1 + 2
-    let b = ((3 * 4) + 5) + (a + 4) * (5 * 3 + 9)
-    var c = 31 / 4
-    var d = 114.514 + 111111000
-    return a / ((2.5 * 100) + 4 * a + 4)
-}
 
-func testRange() {
-    let r5 = 0..10   
-    let r6 = 0..10 : 1 + 2
+    func testRange() {
+        let r5 = 0..10   
+        let r6 = 0..10 : 1 + 2
 
-    let r7 = 10..3*4+2 : 1 
-    let r8 = 0..10 : 1 + 2 - 3
-    let r9 = 10..=0 : (1 + 2) * 3
-    let r10 = (1+2-3+4-5+6)..=10 : -1
+        let r7 = 10..3*4+2 : 1 
+        let r8 = 0..10 : 1 + 2 - 3
+        let r9 = 10..=0 : (1 + 2) * 3
+        let r10 = (1+2-3+4-5+6)..=10 : -1
+    }
 }
 """
 
@@ -73,7 +73,10 @@ class GenerateDocumentTest {
 
     @TestCase
     private func testGenerateDocument() {
-        let path = "C.myfunc"
-        println(CJCodeTool.generateDocument(code, path))
+        var res = code
+        res = CJCodeTool.generateDocument(res, "C")
+        res = CJCodeTool.generateDocument(res, "C.testRange")
+        res = CJCodeTool.generateDocument(res, "C.myfunc")
+        println(res)
     }
 }

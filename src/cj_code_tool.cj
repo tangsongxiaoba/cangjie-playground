@@ -4,15 +4,7 @@ import std.ast.*
 import std.collection.*
 import std.convert.*
 
-class IllegalInputException <: Exception {
-    public init() {
-        super("ILLEGAL INPUT")
-    }
-    
-    public override func getClassName(): String {
-        "IllegalInputException"
-    }
-}
+let DEBUG = true
 
 class CJCodeTool {
     static func generateCodeSignature(code: String): String {
@@ -206,28 +198,40 @@ class CJCodeTool {
         return signature
     }
 
+    /*
+    重命名指定作用域中的标识符
+    */
     static func refractorVariable(code: String, path: String, oldName: String, newName: String): String {
         try {
             var prog = code.toProgram()
             var decl = findDeclByPath(prog, splitPath(path))
             refractorDecl(decl, oldName, newName)
-            return prog.toTokens().toString()
+            return prog.toString()
         } catch (e: IllegalInputException) {
+            if (DEBUG) {
+                e.dump()
+            }
             return e.message
         } catch (e: Exception) {
             throw e
         }
     }
 
-    private static func replaceToken(oldToken: Token, oldValue: String, newValue: String, tokenKind: TokenKind): Token {
+    /*
+    重命名指定标识符
+    */
+    private static func refractorIdentifier(oldToken: Token, oldValue: String, newValue: String): Token {
         if (oldToken.toString() == oldValue) {
-            return Token(tokenKind, newValue)
+            return Token(TokenKind.IDENTIFIER, newValue)
         }
         return oldToken
     }
 
+    /*
+    重命名定义中的标识符
+    */
     private static func refractorDecl(decl: Decl, oldName: String, newName: String): Unit {
-        decl.identifier = replaceToken(decl.identifier, oldName, newName, TokenKind.IDENTIFIER)
+        decl.identifier = refractorIdentifier(decl.identifier, oldName, newName)
         if (decl is ClassDecl) {
             let classDecl = (decl as ClassDecl).getOrThrow()
             for (superType in classDecl.superTypes) {
@@ -237,7 +241,7 @@ class CJCodeTool {
         } else if (decl is FuncDecl) {
             let funcDecl = (decl as FuncDecl).getOrThrow()
             for (p in funcDecl.funcParams) {
-                p.identifier = replaceToken(p.identifier, oldName, newName, TokenKind.IDENTIFIER)
+                p.identifier = refractorIdentifier(p.identifier, oldName, newName)
             }
             refractorBlock(funcDecl.block, oldName, newName)
         } else if (decl is VarDecl) {
@@ -248,17 +252,38 @@ class CJCodeTool {
             try {
                 refractorPattern(varDecl.pattern, oldName, newName) // pattern can be null
             } catch (e: ASTException) {}
+        } else if (decl is InterfaceDecl) {
+            let interfaceDecl = (decl as InterfaceDecl).getOrThrow()
+            for (superType in interfaceDecl.superTypes) {
+                refractorTypeNode(superType, oldName, newName)
+            }
+            refractorBody(interfaceDecl.body, oldName, newName)
+        } else if (decl is PropDecl) {
+            let propDecl = (decl as PropDecl).getOrThrow()
+            propDecl.identifier = refractorIdentifier(propDecl.identifier, oldName, newName)
+            try {
+                refractorDecl(propDecl.setter, oldName, newName)
+            } catch (e: ASTException) {}
+            try {
+                refractorDecl(propDecl.getter, oldName, newName)
+            } catch (e: ASTException) {}
         } else {
-            throw IllegalInputException()
+            throw IllegalInputException(decl)
         }
     }
 
+    /*
+    重命名定义体中的标识符
+    */
     private static func refractorBody(body: Body, oldName: String, newName: String) {
         for (decl in body.decls) {
             refractorDecl(decl, oldName, newName)
         }
     }
 
+    /*
+    重命名表达式中的标识符
+    */
     private static func refractorExpr(expr: Expr, oldName: String, newName: String): Unit {
         if (expr is AssignExpr) {
             let assignExpr = (expr as AssignExpr).getOrThrow()
@@ -297,7 +322,7 @@ class CJCodeTool {
             } catch (e: ASTException) {}
         } else if (expr is RefExpr) {
             let refExpr = (expr as RefExpr).getOrThrow()
-            replaceToken(refExpr.identifier, oldName, newName, TokenKind.IDENTIFIER)
+            refExpr.identifier = refractorIdentifier(refExpr.identifier, oldName, newName)
             for (t in refExpr.typeArguments) {
                 refractorTypeNode(t, oldName, newName)
             }
@@ -310,21 +335,27 @@ class CJCodeTool {
             let unaryExpr = (expr as UnaryExpr).getOrThrow()
             refractorExpr(unaryExpr.expr, oldName, newName)
         } else {  
-            throw IllegalInputException()
+            throw IllegalInputException(expr)
         }
     }
 
+    /*
+    重命名模式中的标识符
+    */
     private static func refractorPattern(pattern: Pattern, oldName: String, newName: String) {
         if (pattern is VarPattern) {
             let varPattern = (pattern as VarPattern).getOrThrow()
-            replaceToken(varPattern.identifier, oldName, newName, TokenKind.IDENTIFIER)
+            varPattern.identifier = refractorIdentifier(varPattern.identifier, oldName, newName)
         } else {
-            throw IllegalInputException()
+            throw IllegalInputException(pattern)
         }
     }
 
+    /*
+    重命名类型节点中的标识符
+    */
     private static func refractorTypeNode(typeNode: TypeNode, oldName: String, newName: String): Unit {
-        typeNode.typeParameterName = replaceToken(typeNode.typeParameterName, oldName, newName, TokenKind.IDENTIFIER)
+        typeNode.typeParameterName = refractorIdentifier(typeNode.typeParameterName, oldName, newName)
         if (typeNode is RefType) {
             let refType = (typeNode as RefType).getOrThrow()
             for (t in refType.typeArguments) {
@@ -333,10 +364,13 @@ class CJCodeTool {
         } else if (typeNode is PrimitiveType) { 
             // do nothing
         } else {
-            throw IllegalInputException()
+            throw IllegalInputException(typeNode)
         }
     }
 
+    /*
+    重命名块中的标识符
+    */
     private static func refractorBlock(block: Block, oldName: String, newName: String) {
         for (node in block.nodes) {
             if (node is Expr) {
@@ -351,13 +385,16 @@ class CJCodeTool {
                 refractorTypeNode((node as TypeNode).getOrThrow(), oldName, newName)
             } else if (node is ImportContent || node is ImportList || node is Modifier || node is PackageHeader) {
             } else {
-                throw Exception("node is unknown")
+                throw IllegalInputException(block)
             }
         }
     }
 
+    /*
+    为类或函数生成注释文档
+    */
     static func generateDocument(code: String, path: String): String {
-        func addSpace(n: Int32, str: String) : StringBuilder {
+        func addIndent(n: Int32, str: String) : StringBuilder {
             let strList = str.split('\n')
             var tempBuilder = StringBuilder()
             for(str in strList) {
@@ -379,13 +416,6 @@ class CJCodeTool {
             }
             return None
         }
-        func getPreLine(index: Int64, tokens: Tokens) : Int32 {
-            var preIndex = index - 1
-            while(tokens.get(preIndex).kind == TokenKind.NL) {
-                preIndex--
-            }
-            return tokens.get(preIndex).pos.line
-        }
         func getDoc(code: String) : String {
             let robot = LLM(url: 'https://api.siliconflow.cn/v1/chat/completions',
                             key: 'sk-pqwthdmbesdwldfllezgjildshqhezpwzjbupqolzijkxjoa',
@@ -395,28 +425,20 @@ class CJCodeTool {
         }
 
         try{
-            var program = code.toProgram()
-            var programTokens = program.toTokens()
-            var decl = findDeclByPath(program, splitPath(path))
-
+            var progTokens = cangjieLex(code)
+            var prog = parseProgram(progTokens)
+            var decl = findDeclByPath(prog, splitPath(path))
             let col = decl.toTokens().get(0).pos.column
-            let line = decl.toTokens().get(0).pos.line
-            let index : Int64 = getIndex(programTokens, decl) ?? throw Exception("cannot get index of decl")
-            let preline = getPreLine(index, programTokens)
-
+            let index : Int64 = getIndex(progTokens, decl).getOrThrow()
             var retBuilder = StringBuilder()
-            for(i in 1..line-preline) {
-                retBuilder.append('\n')
-            }
-
             var strDecl = decl.toTokens().toString()
             let ret = getDoc(strDecl)
-            retBuilder.append(addSpace(col, '/*'))
-            retBuilder.append(addSpace(col, ret))
-            retBuilder.append(addSpace(col, '*/'))
-
-            return programTokens.insert(index, cangjieLex(retBuilder.toString())).toString()
+            retBuilder.append(addIndent(col, ret))
+            return cangjieLex(progTokens[0..index].toString() + retBuilder.toString() + progTokens[index..].toString()).toString()
         } catch(e: IllegalInputException) {
+            if(DEBUG) {
+                e.dump()
+            }
             e.message
         } catch(e: Exception) {
             throw e
@@ -428,13 +450,16 @@ class CJCodeTool {
     */
     static func foldConstant(str: String) : String {
         try {
-            var program = str.toProgram()
-            for(decl in program.decls) {
+            let prog = str.toProgram()
+            for(decl in prog.decls) {
                 foldConstForDecl(decl)
             }
-            return program.toString()
+            return prog.toString()
         } catch(e: IllegalInputException) {
-            e.message
+            if (DEBUG) {
+                e.dump()
+            }
+            return e.message
         } catch(e: Exception) {
             throw e
         }
@@ -457,8 +482,21 @@ class CJCodeTool {
             for(ddecl in ndecl.body.decls) {
                 foldConstForDecl(ddecl)
             }
+        } else if (decl is InterfaceDecl) {
+            var ndecl = (decl as InterfaceDecl).getOrThrow()
+            for (ddecl in ndecl.body.decls) {
+                foldConstForDecl(ddecl)
+            }
+        } else if (decl is PropDecl) {
+            var ndecl = (decl as PropDecl).getOrThrow()
+            try {
+                foldConstForDecl(ndecl.getter)
+            } catch (e: ASTException) {}
+            try {
+                foldConstForDecl(ndecl.setter)
+            } catch (e: ASTException) {}
         } else {
-            throw IllegalInputException()
+            throw IllegalInputException(decl)
         }
     }
 
@@ -532,8 +570,7 @@ class CJCodeTool {
             // No need to fold?
         }
         else {
-            // unexpected expression type
-            throw IllegalInputException()
+            throw IllegalInputException(expr)
         }
         return expr
     }
@@ -616,16 +653,16 @@ class CJCodeTool {
         }
         
         if (paths.size > 2) {
-            throw IllegalInputException()
+            throw IllegalInputException(prog)
         }
         let topPath: String = paths[0]
-        let topDecl = findDecl(prog.decls, topPath) ?? throw IllegalInputException()
+        let topDecl = findDecl(prog.decls, topPath) ?? throw IllegalInputException(prog)
         if (paths.size == 1) {
             return topDecl
         }
-        let classDecl = topDecl as ClassDecl ?? throw IllegalInputException()
+        let classDecl = topDecl as ClassDecl ?? throw IllegalInputException(prog)
         let subPath: String = paths[1]
-        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw IllegalInputException()
+        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw IllegalInputException(prog)
         return subDecl
     }
 
