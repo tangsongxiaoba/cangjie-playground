@@ -12,8 +12,8 @@ class C <: I1 {
     private var mySize = 1*2
 
     func myfunc(a: Float64, n: Int64) : Float64 {
-        for(i : Int64 in 0..=n) {
-            a *= (i + 2 * 42)
+        for(i : Int64 in mySize..=n) {
+            a *= (i + 2 * 42) + mySize
         }
         return a
     }
@@ -51,6 +51,15 @@ class GenerateCodeSignatureTest {
 }
 
 @Test
+class RefractorVariableTest {
+
+    @TestCase
+    private func testRefractorVariable() {
+        println(CJCodeTool.refractorVariable(code, "C", "mySize", "yourSize"))
+    }
+}
+
+@Test
 class FoldConstantTest {
 
     @TestCase
@@ -61,10 +70,10 @@ class FoldConstantTest {
 
 @Test
 class GenerateDocumentTest {
-    private let path = "C.myfunc"
 
     @TestCase
     private func testGenerateDocument() {
+        let path = "C.myfunc"
         println(CJCodeTool.generateDocument(code, path))
     }
 }

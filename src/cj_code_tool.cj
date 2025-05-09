@@ -4,6 +4,16 @@ import std.ast.*
 import std.collection.*
 import std.convert.*
 
+class IllegalInputException <: Exception {
+    public init() {
+        super("ILLEGAL INPUT")
+    }
+    
+    public open override func getClassName(): String {
+        "IllegalInputException"
+    }
+}
+
 class CJCodeTool {
     static func generateCodeSignature(code: String): String {
         var signature = Tokens()
@@ -198,33 +208,27 @@ class CJCodeTool {
 
     static func refractorVariable(code: String, path: String, oldName: String, newName: String): String {
         try {
-            var decl = findDeclByPath(code.toProgram(), splitPath(path))
+            var prog = code.toProgram()
+            var decl = findDeclByPath(prog, splitPath(path))
             refractorDecl(decl, oldName, newName)
-            return decl.toTokens().toString()
+            return prog.toTokens().toString()
         } catch (e: Exception) {
-            return "ILLEGAL INPUT"
+            throw e
         }
     }
 
-    // 声明节点的父类，包含注解列表、“,”、泛型约束、形参列表、标识符、关键字、修饰符、属性
-    private static func refractorDecl(node: Node, oldName: String, newName: String): Unit{
-        var decl = node as Decl
-        match (decl) {
-            case Some(decl) =>
-                if (decl.identifier.toString() == oldName) {
-                    decl.identifier = Token(TokenKind.IDENTIFIER, newName)
-                }
-                if (decl is ClassDecl) {
-                    refractorClassDecl(decl, oldName, newName)
-                } else if (decl is FuncDecl) {
-                    refractorFuncDecl(decl, oldName, newName)
-                } else if (decl is VarDecl) {
-                    refractorVarDecl(decl, oldName, newName)
-                } else {
-                    throw Exception("decl is unknown")
-                }
-            case None =>
-                throw ASTException("decl is not a funcDecl")
+    private static func refractorDecl(decl: Decl, oldName: String, newName: String): Unit {
+        if (decl.identifier.toString() == oldName) {
+            decl.identifier = Token(TokenKind.IDENTIFIER, newName)
+        }
+        if (decl is ClassDecl) {
+            refractorClassDecl(decl, oldName, newName)
+        } else if (decl is FuncDecl) {
+            refractorFuncDecl(decl, oldName, newName)
+        } else if (decl is VarDecl) {
+            refractorVarDecl(decl, oldName, newName)
+        } else {
+            throw ASTException("ILLEGAL INPUT")
         }
     }
 
@@ -369,10 +373,11 @@ class CJCodeTool {
 
     // 模式匹配节点的父类
     private static func refractorPattern(node: Node, oldName: String, newName: String) {
-        var pattern = node as Pattern
+        var pattern = node as Pattern ?? throw Exception("unknown")
         if (pattern is VarPattern) {
             refractorVarPattern(node, oldName, newName)
         } else {
+            println(pattern.toTokens().toString())
             throw Exception("pattern is unknown")
         }
     }
