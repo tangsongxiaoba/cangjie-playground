@@ -7,6 +7,9 @@ import std.convert.*
 let DEBUG = true
 
 class CJCodeTool {
+    /*
+    为代码中所有的函数、类和接口生成签名
+    */
     static func generateCodeSignature(code: String): String {
         var signature = Tokens()
         let tks = cangjieLex(code)
@@ -23,16 +26,21 @@ class CJCodeTool {
                 signature += decl.identifier
 
                 if (decl is ClassDecl) {
-                    signature += parseClassDecl(decl)
+                    signature += signClassDecl((decl as ClassDecl).getOrThrow())
                 } else if (decl is InterfaceDecl) {
-                    signature += parseInterfaceDecl(decl)
+                    signature += signInterfaceDecl((decl as InterfaceDecl).getOrThrow())
                 } else if (decl is FuncDecl) {
-                    signature += parseFuncDecl(decl)
+                    signature += signFuncDecl((decl as FuncDecl).getOrThrow())
                 } else {
-                    throw Exception("decl is unknown")
+                    throw IllegalInputException(decl)
                 }
+            } catch (e: IllegalInputException) {
+                if (DEBUG) {
+                    e.dump()
+                }
+                return e.message
             } catch (e: Exception) {
-                return "ILLEGAL INPUT"
+                throw e
             }
             
             if (start < tks.size) {
@@ -43,98 +51,92 @@ class CJCodeTool {
         return signature.toString()
     }
 
-    private static func parseClassDecl(decl: Decl): Tokens {
+    /*
+    为类生成签名
+    */
+    private static func signClassDecl(classDecl: ClassDecl): Tokens {
         var signature = Tokens()
-        let classDecl = decl as ClassDecl
-        match (classDecl) {
-            case Some(classDecl) => 
-                let superTypes = classDecl.superTypes // superTypes can be null
-                if (superTypes.size > 0) {
-                    signature += classDecl.upperBound
-                    var hasSuperTypeBitAnds = false
-                    for (s in superTypes) {
-                        if (hasSuperTypeBitAnds) {
-                            signature += classDecl.superTypeBitAnds[0]
-                        }
-                        signature += s.toTokens()
-                        hasSuperTypeBitAnds = true
-                    }
+        let superTypes = classDecl.superTypes // superTypes can be null
+        if (superTypes.size > 0) {
+            signature += classDecl.upperBound
+            var hasSuperTypeBitAnds = false
+            for (s in superTypes) {
+                if (hasSuperTypeBitAnds) {
+                    signature += classDecl.superTypeBitAnds[0]
                 }
+                signature += s.toTokens()
+                hasSuperTypeBitAnds = true
+            }
+        }
 
-                let body = classDecl.body
-                if (body.decls.size > 0) {
-                    signature += body.lBrace
-                    signature += Token(TokenKind.NL)
-                    let bodyDecls = body.decls
-                    signature += parseBodyDecls(bodyDecls)
-                    signature += Token(TokenKind.NL)
-                    signature += body.rBrace
-                }
-            case None => 
-                throw ASTException("decl is not a classDecl")
+        let body = classDecl.body
+        if (body.decls.size > 0) {
+            signature += body.lBrace
+            signature += Token(TokenKind.NL)
+            let bodyDecls = body.decls
+            signature += signBodyDecls(bodyDecls)
+            signature += Token(TokenKind.NL)
+            signature += body.rBrace
         }
 
         return signature
     }
 
-    private static func parseInterfaceDecl(decl: Decl): Tokens {
+    /*
+    为接口生成签名
+    */
+    private static func signInterfaceDecl(interfaceDecl: InterfaceDecl): Tokens {
         var signature = Tokens()
-        let interfaceDecl = decl as InterfaceDecl
-        match (interfaceDecl) {
-            case Some(interfaceDecl) => 
-                let superTypes = interfaceDecl.superTypes // superTypes can be null
-                if (superTypes.size > 0) {
-                    signature += interfaceDecl.upperBound
-                    var hasSuperTypeBitAnds = false
-                    for (s in superTypes) {
-                        if (hasSuperTypeBitAnds) {
-                            signature += interfaceDecl.superTypeBitAnds[0]
-                        }
-                        signature += s.toTokens()
-                        hasSuperTypeBitAnds = true
-                    }
+        let superTypes = interfaceDecl.superTypes // superTypes can be null
+        if (superTypes.size > 0) {
+            signature += interfaceDecl.upperBound
+            var hasSuperTypeBitAnds = false
+            for (s in superTypes) {
+                if (hasSuperTypeBitAnds) {
+                    signature += interfaceDecl.superTypeBitAnds[0]
                 }
+                signature += s.toTokens()
+                hasSuperTypeBitAnds = true
+            }
+        }
 
-                let body = interfaceDecl.body
-                if (body.decls.size > 0) {
-                    signature += body.lBrace
-                    signature += Token(TokenKind.NL)
-                    let bodyDecls = body.decls
-                    signature += parseBodyDecls(bodyDecls)
-                    signature += Token(TokenKind.NL)
-                    signature += body.rBrace
-                }
-            case None => 
-                throw ASTException("decl is not a interfaceDecl")
+        let body = interfaceDecl.body
+        if (body.decls.size > 0) {
+            signature += body.lBrace
+            signature += Token(TokenKind.NL)
+            let bodyDecls = body.decls
+            signature += signBodyDecls(bodyDecls)
+            signature += Token(TokenKind.NL)
+            signature += body.rBrace
         }
         return signature
     }
 
-    private static func parseFuncDecl(decl: Decl): Tokens {
+    /*
+    为方法生成签名
+    */
+    private static func signFuncDecl(funcDecl: FuncDecl): Tokens {
         var signature = Tokens()
-        let funcDecl = decl as FuncDecl
-            match (funcDecl) {
-            case Some(funcDecl) =>
-                signature += funcDecl.lParen
-                let FuncParams = funcDecl.funcParams // funcParams can be null
-                if (FuncParams.size > 0) {
-                    for (p in FuncParams) {
-                        signature += p.toTokens()
-                    }
-                }
-                signature += funcDecl.rParen
-                try {
-                    let declType = funcDecl.declType // declType can be null
-                    signature += funcDecl.colon
-                    signature += declType.toTokens()
-                } catch (e: ASTException) {}
-            case None =>
-                throw ASTException("decl is not a funcDecl")
+        signature += funcDecl.lParen
+        let funcParams = funcDecl.funcParams // funcParams can be null
+        if (funcParams.size > 0) {
+            for (p in funcParams) {
+                signature += p.toTokens()
+            }
         }
+        signature += funcDecl.rParen
+        try {
+            let declType = funcDecl.declType // declType can be null
+            signature += funcDecl.colon
+            signature += declType.toTokens()
+        } catch (e: ASTException) {}
         return signature
     }
 
-    private static func parseBodyDecls(decls: ArrayList<Decl>): Tokens {
+    /*
+    为定义体内部的定义生成签名
+    */
+    private static func signBodyDecls(decls: ArrayList<Decl>): Tokens {
         var signature = Tokens()
         var isFirstDecl = true
         for (decl in decls) {
@@ -147,53 +149,30 @@ class CJCodeTool {
                 signature += m.toTokens() // modifiers can be null
             }
             if (decl.keyword.toString() == decl.identifier.toString()) {
-                // keyword and identifier are the same: "init"
                 signature += decl.keyword
             } else {
                 signature += decl.keyword
                 signature += decl.identifier
             }
             if (decl is VarDecl) {
-                signature += parseVarDecl(decl)
-            } else if (decl is PropDecl) {
-                signature += parsePropDecl(decl)
-            } else if (decl is FuncDecl) {
-                signature += parseFuncDecl(decl)
-            } else {
-                throw Exception("decl is unknown")
-            }
-        }
-        return signature
-    }
-
-    private static func parseVarDecl(decl: Decl): Tokens {
-        var signature = Tokens()
-        let varDecl = decl as VarDecl
-        match (varDecl) {
-            case Some(varDecl) =>
+                let varDecl = (decl as VarDecl).getOrThrow()
                 try {
                     let declType = varDecl.declType // declType can be null
                     signature += varDecl.colon
                     signature += declType.toTokens()
                 } catch (e: ASTException) {}
-            case None =>
-                throw ASTException("decl is not a varDecl")
-        }
-        return signature
-    }
-
-    private static func parsePropDecl(decl: Decl): Tokens {
-        var signature = Tokens()
-        let propDecl = decl as PropDecl
-        match (propDecl) {
-            case Some(propDecl) =>
+            } else if (decl is PropDecl) {
+                let propDecl = (decl as PropDecl).getOrThrow()
                 try {
                     let declType = propDecl.declType // declType can be null
                     signature += propDecl.colon
                     signature += declType.toTokens()
                 } catch (e: ASTException) {}
-            case None =>
-                throw ASTException("decl is not a propDecl")
+            } else if (decl is FuncDecl) {
+                signature += signFuncDecl((decl as FuncDecl).getOrThrow())
+            } else {
+                throw IllegalInputException(decl)
+            }
         }
         return signature
     }
