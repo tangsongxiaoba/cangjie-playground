@@ -643,7 +643,6 @@ class CJCodeTool {
                 context: true)
             return robot.chat(code)
         }
-        // TODO
         var program = code.toProgram()
         var programTokens = program.toTokens()
         var decl = findDeclByPath(program, splitPath(path))
@@ -651,7 +650,6 @@ class CJCodeTool {
         let col = decl.toTokens().get(0).pos.column
         let line = decl.toTokens().get(0).pos.line
         let ret = getDoc(strDecl)
-        // let ret = "ret"
         var retBuilder = StringBuilder()
         retBuilder.append(addSpace(col, '/*'))
         retBuilder.append(addSpace(col, ret))
@@ -666,11 +664,15 @@ class CJCodeTool {
     折叠常量
     */
     static func foldConstant(str: String) : String {
-        var program = str.toProgram()
-        for(decl in program.decls) {
-            foldConstForDecl(decl)
+        try {
+            var program = str.toProgram()
+            for(decl in program.decls) {
+                foldConstForDecl(decl)
+            }
+            return program.toString()
+        } catch(e: Exception) {
+            return "ILLEGAL INPUT"
         }
-        return program.toString()
     }
 
     /*
@@ -679,23 +681,20 @@ class CJCodeTool {
     private static func foldConstForDecl(decl: Decl): Unit {
         if (decl is VarDecl) {
             var ndecl = (decl as VarDecl).getOrThrow()
-            try {
-                ndecl.expr = foldConstForExpr(ndecl.expr)
-            } catch (e: ASTException) {
-                return
-            }
+            ndecl.expr = foldConstForExpr(ndecl.expr)
         }
         else if (decl is FuncDecl) {
             var ndecl = (decl as FuncDecl).getOrThrow()
             foldConstForBlock(ndecl.block)
-        } 
+        }
         else if (decl is ClassDecl) {
             var ndecl = (decl as ClassDecl).getOrThrow()
             for(ddecl in ndecl.body.decls) {
                 foldConstForDecl(ddecl)
             }
+        } else {
+            throw Exception('unknown decl type')
         }
-
     }
 
     /*
@@ -769,7 +768,7 @@ class CJCodeTool {
         }
         else {
             // unexpected expression type
-            throw IllegalArgumentException()
+            throw Exception('unknown expr type')
         }
         return expr
     }
@@ -823,7 +822,7 @@ class CJCodeTool {
                 }
                 else {
                     // unexpected calculation mode
-                    throw IllegalArgumentException()
+                    throw Exception("unknown calculation mode")
                 }
             }
 
