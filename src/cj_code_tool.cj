@@ -835,9 +835,9 @@ class CJCodeTool {
         if (paths.size == 1) {
             return topDecl
         }
-        let classDecl = topDecl as ClassDecl ?? throw throw IllegalInputException()
+        let classDecl = topDecl as ClassDecl ?? throw IllegalInputException()
         let subPath: String = paths[1]
-        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw throw IllegalInputException()
+        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw IllegalInputException()
         return subDecl
     }
 
