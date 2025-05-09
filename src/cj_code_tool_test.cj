@@ -12,7 +12,7 @@ class C <: I1 {
     private var mySize = 1*2
 
     func myfunc(a: Float64, n: Int64) : Float64 {
-        for(i : Int64 in mySize..=n) {
+        for(i in mySize..=n) {
             a *= (i + 2 * 42) + mySize
         }
         return a
@@ -20,7 +20,7 @@ class C <: I1 {
 }
 
 func myfunc(a: Float64, n: Int64) : Float64 {
-    for(i : Int64 in 0..=n) {
+    for(i in 0..=n) {
         a *= (i + 3 * 4)
     }
     let a = 1 + 2

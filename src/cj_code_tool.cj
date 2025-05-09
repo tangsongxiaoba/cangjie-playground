@@ -9,7 +9,7 @@ class IllegalInputException <: Exception {
         super("ILLEGAL INPUT")
     }
     
-    public open override func getClassName(): String {
+    public override func getClassName(): String {
         "IllegalInputException"
     }
 }
@@ -212,362 +212,147 @@ class CJCodeTool {
             var decl = findDeclByPath(prog, splitPath(path))
             refractorDecl(decl, oldName, newName)
             return prog.toTokens().toString()
+        } catch (e: IllegalInputException) {
+            return e.message
         } catch (e: Exception) {
             throw e
         }
     }
 
+    private static func replaceToken(oldToken: Token, oldValue: String, newValue: String, tokenKind: TokenKind): Token {
+        if (oldToken.toString() == oldValue) {
+            return Token(tokenKind, newValue)
+        }
+        return oldToken
+    }
+
     private static func refractorDecl(decl: Decl, oldName: String, newName: String): Unit {
-        if (decl.identifier.toString() == oldName) {
-            decl.identifier = Token(TokenKind.IDENTIFIER, newName)
-        }
+        decl.identifier = replaceToken(decl.identifier, oldName, newName, TokenKind.IDENTIFIER)
         if (decl is ClassDecl) {
-            refractorClassDecl(decl, oldName, newName)
+            let classDecl = (decl as ClassDecl).getOrThrow()
+            for (superType in classDecl.superTypes) {
+                refractorTypeNode(superType, oldName, newName)
+            }
+            refractorBody(classDecl.body, oldName, newName)
         } else if (decl is FuncDecl) {
-            refractorFuncDecl(decl, oldName, newName)
+            let funcDecl = (decl as FuncDecl).getOrThrow()
+            for (p in funcDecl.funcParams) {
+                p.identifier = replaceToken(p.identifier, oldName, newName, TokenKind.IDENTIFIER)
+            }
+            refractorBlock(funcDecl.block, oldName, newName)
         } else if (decl is VarDecl) {
-            refractorVarDecl(decl, oldName, newName)
+            let varDecl = (decl as VarDecl).getOrThrow()
+            try {
+                refractorExpr(varDecl.expr, oldName, newName) // expr can be null
+            } catch (e: ASTException) {}
+            try {
+                refractorPattern(varDecl.pattern, oldName, newName) // pattern can be null
+            } catch (e: ASTException) {}
         } else {
-            throw ASTException("ILLEGAL INPUT")
+            throw IllegalInputException()
         }
     }
 
-    // 类定义节点，包含类体、“&”、父类或父接口和“<:”
-    private static func refractorClassDecl(decl: Decl, oldName: String, newName: String) {
-        var classDecl = decl as ClassDecl
-        match (classDecl) {
-            case Some(classDecl) =>
-                for (superType in classDecl.superTypes) {
-                    refractorTypeNode(superType, oldName, newName)
-                }
-                refractorBody(classDecl.body, oldName, newName)
-            case None =>    
-                throw ASTException("decl is not a classDecl")
+    private static func refractorBody(body: Body, oldName: String, newName: String) {
+        for (decl in body.decls) {
+            refractorDecl(decl, oldName, newName)
         }
     }
 
-    // 类体节点，包含声明节点集合和左右大括号
-    private static func refractorBody(node: Node, oldName: String, newName: String) {
-        var body = node as Body
-        match (body) {
-            case Some(body) =>
-                for (decl in body.decls) {
-                    refractorDecl(decl, oldName, newName)
-                }
-            case None =>
-                throw ASTException("node is not a body")
+    private static func refractorExpr(expr: Expr, oldName: String, newName: String): Unit {
+        if (expr is AssignExpr) {
+            let assignExpr = (expr as AssignExpr).getOrThrow()
+            refractorExpr(assignExpr.leftExpr, oldName, newName)
+            refractorExpr(assignExpr.rightExpr, oldName, newName)
+        } else if (expr is BinaryExpr) {
+            let binaryExpr = (expr as BinaryExpr).getOrThrow()
+            refractorExpr(binaryExpr.leftExpr, oldName, newName)
+            refractorExpr(binaryExpr.rightExpr, oldName, newName)
+        } else if (expr is Block) {
+            refractorBlock((expr as Block).getOrThrow(), oldName, newName)
+        } else if (expr is ForInExpr) {
+            let forInExpr = (expr as ForInExpr).getOrThrow()
+            refractorBlock(forInExpr.block, oldName, newName)
+            refractorExpr(forInExpr.expr, oldName, newName)
+            refractorPattern(forInExpr.pattern, oldName, newName)
+        } else if (expr is IfExpr) {
+            let ifExpr = (expr as IfExpr).getOrThrow()
+            refractorExpr(ifExpr.condition, oldName, newName)
+            refractorExpr(ifExpr.elseExpr, oldName, newName)
+            refractorBlock(ifExpr.ifBlock, oldName, newName)
+        } else if (expr is LitConstExpr) {
+        } else if (expr is ParenExpr) {
+            let parenExpr = (expr as ParenExpr).getOrThrow()
+            refractorExpr(parenExpr.parenthesizedExpr, oldName, newName)
+        } else if (expr is RangeExpr) {
+            let rangeExpr = (expr as RangeExpr).getOrThrow()
+            try {
+                refractorExpr(rangeExpr.start, oldName, newName) // start can be null
+            } catch (e: ASTException) {}
+            try {
+                refractorExpr(rangeExpr.end, oldName, newName) // end can be null
+            } catch (e: ASTException) {}
+            try {
+                refractorExpr(rangeExpr.step, oldName, newName) // step can be null
+            } catch (e: ASTException) {}
+        } else if (expr is RefExpr) {
+            let refExpr = (expr as RefExpr).getOrThrow()
+            replaceToken(refExpr.identifier, oldName, newName, TokenKind.IDENTIFIER)
+            for (t in refExpr.typeArguments) {
+                refractorTypeNode(t, oldName, newName)
+            }
+        } else if (expr is ReturnExpr) {
+            let returnExpr = (expr as ReturnExpr).getOrThrow()
+            try {
+                refractorExpr(returnExpr.expr, oldName, newName) // expr can be null
+            } catch (e: ASTException) {}
+        } else if (expr is UnaryExpr) {
+            let unaryExpr = (expr as UnaryExpr).getOrThrow()
+            refractorExpr(unaryExpr.expr, oldName, newName)
+        } else {  
+            throw IllegalInputException()
         }
     }
 
-    // 函数定义节点，包含函数体、冒号、返回类型、参数、左右小括号和重载操作符
-    private static func refractorFuncDecl(decl: Decl, oldName: String, newName: String) {
-        var funcDecl = decl as FuncDecl
-        match (funcDecl) {
-            case Some(funcDecl) =>
-                for (p in funcDecl.funcParams) {
-                    if (p.identifier.toString() == oldName) {
-                        p.identifier = Token(TokenKind.IDENTIFIER, newName)
-                    }
-                }
-                refractorBlock(funcDecl.block, oldName, newName)
-            case None =>
-                throw ASTException("decl is not a funcDecl")
-        }
-    }
-
-    // 变量定义节点，包含赋值操作符位置信息、冒号位置信息、变量类型、初始化节点、pattern节点
-    private static func refractorVarDecl(decl: Decl, oldName: String, newName: String) {
-        var varDecl = decl as VarDecl
-        match (varDecl) {
-            case Some(varDecl) =>
-                try {
-                    refractorExpr(varDecl.expr, oldName, newName) // expr can be null
-                } catch (e: ASTException) {}
-                try {
-                    refractorPattern(varDecl.pattern, oldName, newName) // pattern can be null
-                } catch (e: ASTException) {}
-            case None =>
-                throw ASTException("decl is not a varDecl")
-        }
-    }
-
-    // 仓颉语法树节点的父类
-    private static func refractorNode(node: Node, oldName: String, newName: String) {
-        if (node is Expr) {
-            refractorExpr(node, oldName, newName)
-        } else if (node is Decl) {
-            refractorDecl(node, oldName, newName)
-        } else if (node is Body) {
-            refractorBody(node, oldName, newName)
-        } else if (node is ImportContent) {
-            refractorImportContent(node, oldName, newName)
-        } else if (node is ImportList) {
-            refractorImportList(node, oldName, newName)
-        } else if (node is Modifier) {
-            refractorModifier(node, oldName, newName)
-        } else if (node is PackageHeader) {
-            refractorPackageHeader(node, oldName, newName)
-        } else if (node is Pattern) {
-            refractorPattern(node, oldName, newName)
-        } else if (node is TypeNode) {
-            refractorTypeNode(node, oldName, newName)
-        } else {
-            throw Exception("node is unknown")
-        }          
-    }
-
-    // 表达式节点的父类
-    private static func refractorExpr(node: Node, oldName: String, newName: String): Unit{
-        var expr = node as Expr
-        match (expr) {
-            case Some(expr) =>
-                if (expr is AssignExpr) {
-                    refractorAssignExpr(expr, oldName, newName)
-                } else if (expr is BinaryExpr) {
-                    refractorBinaryExpr(expr, oldName, newName)
-                } else if (expr is Block) {
-                    refractorBinaryExpr(expr, oldName, newName)
-                } else if (expr is ForInExpr) {
-                    refractorForInExpr(expr, oldName, newName)
-                } else if (expr is IfExpr) {
-                    refractorIfExpr(expr, oldName, newName)
-                } else if (expr is LitConstExpr) {
-                    refractorLitConstExpr(expr, oldName, newName)
-                } else if (expr is ParenExpr) {
-                    refractorParenExpr(expr, oldName, newName)
-                } else if (expr is RangeExpr) {
-                    refractorRangeExpr(expr, oldName, newName)
-                } else if (expr is RefExpr) {
-                    refractorRefExpr(expr, oldName, newName)
-                } else if (expr is ReturnExpr) {
-                    refractorReturnExpr(expr, oldName, newName)
-                } else if (expr is UnaryExpr) {
-                    refractorUnaryExpr(expr, oldName, newName)
-                } else {  
-                    throw Exception("expr is unknown")
-                }
-            case None =>
-                throw ASTException("node is not an expr")
-        }
-    }
-
-    // 导入包节点，包含导入类型、完整包名的前缀部分、“.”、被导入的项、导入的定义或声明的别名词法单元序列、左右大括号、所有被导入的项、“,”
-    private static func refractorImportContent(node: Node, oldName: String, newName: String) {
-        // do nothing：不在作用域内
-    }
-
-    // 包导入节点，包含修饰符、import关键字和导入的具体项
-    private static func refractorImportList(node: Node, oldName: String, newName: String) {
-        // do nothing：不在作用域内
-    }
-
-    // 修饰符节点，包含关键字
-    private static func refractorModifier(node: Node, oldName: String, newName: String) {
-        // do nothing：修饰符不替换
-    }
-
-    // 包声明节点，包含访问性修饰符、macro关键字、package关键字、完整包名的前缀部分、“.”、包名
-    private static func refractorPackageHeader(node: Node, oldName: String, newName: String) {
-        // do nothing：不在作用域内
-    }
-
-    // 模式匹配节点的父类
-    private static func refractorPattern(node: Node, oldName: String, newName: String) {
-        var pattern = node as Pattern ?? throw Exception("unknown")
+    private static func refractorPattern(pattern: Pattern, oldName: String, newName: String) {
         if (pattern is VarPattern) {
-            refractorVarPattern(node, oldName, newName)
+            let varPattern = (pattern as VarPattern).getOrThrow()
+            replaceToken(varPattern.identifier, oldName, newName, TokenKind.IDENTIFIER)
         } else {
-            println(pattern.toTokens().toString())
-            throw Exception("pattern is unknown")
+            throw IllegalInputException()
         }
     }
 
-    // 绑定模式节点，包含标识符
-    private static func refractorVarPattern(node: Node, oldName: String, newName: String) {
-        var varPattern = node as VarPattern
-        match (varPattern) {
-            case Some(varPattern) =>
-                if (varPattern.identifier.toString() == oldName) {
-                    varPattern.identifier = Token(TokenKind.IDENTIFIER, newName)
-                }
-            case None =>
-                throw ASTException("node is not an varPattern")
+    private static func refractorTypeNode(typeNode: TypeNode, oldName: String, newName: String): Unit {
+        typeNode.typeParameterName = replaceToken(typeNode.typeParameterName, oldName, newName, TokenKind.IDENTIFIER)
+        if (typeNode is RefType) {
+            let refType = (typeNode as RefType).getOrThrow()
+            for (t in refType.typeArguments) {
+                refractorTypeNode(t, oldName, newName)
+            }
+        } else if (typeNode is PrimitiveType) { 
+            // do nothing
+        } else {
+            throw IllegalInputException()
         }
     }
 
-    // 类型节点的父类，包含类型节点的参数，“:”
-    private static func refractorTypeNode(node: Node, oldName: String, newName: String): Unit {
-        var typeNode = node as TypeNode
-        match (typeNode) {
-            case Some(typeNode) =>
-                if (typeNode.typeParameterName.toString() == oldName) {
-                    typeNode.typeParameterName = Token(TokenKind.IDENTIFIER, newName)
-                }
-                if (typeNode is PrimitiveType) {
-                    refractorPrimitiveType(typeNode, oldName, newName)
-                } else if (typeNode is RefType) {
-                    refractorRefType(typeNode, oldName, newName)
-                } else {
-                    throw Exception("typeNode is unknown")
-                }
-            case None =>
-                throw ASTException("node is not an typeNode")
-        }
-    }
-
-    // 基本类型节点，包含关键字
-    private static func refractorPrimitiveType(typeNode: TypeNode, oldName: String, newName: String) {
-        // do nothing：关键字不替换
-    }
-
-    // 非基础类型节点，包含“,”、关键字、左右尖括号、实例化类型列表
-    private static func refractorRefType(typeNode: TypeNode, oldName: String, newName: String) {
-        var refType = typeNode as RefType
-        match (refType) {
-            case Some(refType) =>
-                for (t in refType.typeArguments) {
-                    refractorTypeNode(t, oldName, newName)
-                }
-            case None =>
-                throw ASTException("node is not an refType")
-        }
-    }
-
-    // 赋值表达式节点，包含左操作数、右操作数和操作符
-    private static func refractorAssignExpr(expr: Expr, oldName: String, newName: String) {
-        var assignExpr = expr as AssignExpr
-        match (assignExpr) {
-            case Some(assignExpr) =>
-                refractorExpr(assignExpr.leftExpr, oldName, newName)
-                refractorExpr(assignExpr.rightExpr, oldName, newName)
-            case None =>
-                throw ASTException("node is not an assignExpr")
-        }
-    }
-
-    // 二元操作表达式节点，包含左操作数、右操作数和操作符
-    private static func refractorBinaryExpr(expr: Expr, oldName: String, newName: String) {
-        var binaryExpr = expr as BinaryExpr
-        match (binaryExpr) {
-            case Some(binaryExpr) =>
-                refractorExpr(binaryExpr.leftExpr, oldName, newName)
-                refractorExpr(binaryExpr.rightExpr, oldName, newName)
-            case None =>
-                throw ASTException("node is not an binaryExpr")
-        }
-    }
-
-    // 块节点，包含左大括号、右大括号和块内表达式或声明序列
-    private static func refractorBlock(expr: Expr, oldName: String, newName: String) {
-        var block = expr as Block
-        match (block) {
-            case Some(block) =>
-                for (node in block.nodes) {
-                    refractorNode(node, oldName, newName)
-                }
-            case None =>
-                throw ASTException("node is not an block")
-        }
-    }
-
-    // for-in表达式节点，包含循环体、表达式、for关键字、in关键字、where关键字、for的左右小括号、pattern节点、patternGuard条件表达式
-    private static func refractorForInExpr(expr: Expr, oldName: String, newName: String) {
-        var forInExpr = expr as ForInExpr
-        match (forInExpr) {
-            case Some(forInExpr) =>
-                refractorBlock(forInExpr.block, oldName, newName)
-                refractorExpr(forInExpr.expr, oldName, newName)
-                refractorPattern(forInExpr.pattern, oldName, newName)
-            case None =>
-                throw ASTException("node is not an forInExpr")
-        }
-    }
-
-    // 条件表达式节点，包含if后的条件表达式、else后的分支节点、if后的block节点、if和else关键字、if的左右小括号
-    private static func refractorIfExpr(expr: Expr, oldName: String, newName: String) {
-        var ifExpr = expr as IfExpr
-        match (ifExpr) {
-            case Some(ifExpr) =>
-                refractorExpr(ifExpr.condition, oldName, newName)
-                refractorExpr(ifExpr.elseExpr, oldName, newName)
-                refractorBlock(ifExpr.ifBlock, oldName, newName)
-            case None =>
-                throw ASTException("node is not an ifExpr")
-        }
-    }
-
-    // 常量表达式节点，包含字面量
-    private static func refractorLitConstExpr(expr: Expr, oldName: String, newName: String) {
-        // do nothing: "abc", 123 等递归最小单元，无需替换
-    }
-
-    // 括号表达式节点，包含左右小括号和括号内的子表达式
-    private static func refractorParenExpr(expr: Expr, oldName: String, newName: String) {
-        var parenExpr = expr as ParenExpr
-        match (parenExpr) {
-            case Some(parenExpr) =>
-                refractorExpr(parenExpr.parenthesizedExpr, oldName, newName)
-            case None =>
-                throw ASTException("node is not an parenExpr")
-        }
-    }
-
-    // 包含区间操作符的表达式节点，包含“:”操作符、终止值、起始值、Range操作符“..”“..=”、序列前后两个元素的差值
-    private static func refractorRangeExpr(expr: Expr, oldName: String, newName: String) {
-        var rangeExpr = expr as RangeExpr
-        match (rangeExpr) {
-            case Some(rangeExpr) =>
-                try {
-                    refractorExpr(rangeExpr.start, oldName, newName) // start can be null
-                } catch (e: ASTException) {}
-                try {
-                    refractorExpr(rangeExpr.end, oldName, newName) // end can be null
-                } catch (e: ASTException) {}
-                try {
-                    refractorExpr(rangeExpr.step, oldName, newName) // step can be null
-                } catch (e: ASTException) {}
-            case None =>
-                throw ASTException("node is not an rangeExpr")
-        }
-    }
-
-    // 声明的表达式节点，包含“,”词法单元序列，标识符，左右尖括号，实例化类型
-    private static func refractorRefExpr(expr: Expr, oldName: String, newName: String) {
-        var refExpr = expr as RefExpr
-        match (refExpr) {
-            case Some(refExpr) =>
-                if (refExpr.identifier.toString() == oldName) {
-                    refExpr.identifier = Token(TokenKind.IDENTIFIER, newName)
-                }
-                for (t in refExpr.typeArguments) {
-                    refractorTypeNode(t, oldName, newName)
-                }
-            case None =>
-                throw ASTException("node is not an refExpr")
-        }
-    }
-
-    // return表达式节点，包含return关键字和表达式
-    private static func refractorReturnExpr(expr: Expr, oldName: String, newName: String) {
-        var returnExpr = expr as ReturnExpr
-        match (returnExpr) {
-            case Some(returnExpr) =>
-                try {
-                    refractorExpr(returnExpr.expr, oldName, newName) // expr can be null
-                } catch (e: ASTException) {}
-            case None =>
-                throw ASTException("node is not an returnExpr")
-        }
-    }
-
-    // 一元操作表达式节点，包含一元操作符、操作数
-    private static func refractorUnaryExpr(expr: Expr, oldName: String, newName: String) {
-        var unaryExpr = expr as UnaryExpr
-        match (unaryExpr) {
-            case Some(unaryExpr) =>
-                refractorExpr(unaryExpr.expr, oldName, newName)
-            case None =>
-                throw ASTException("node is not an unaryExpr")
+    private static func refractorBlock(block: Block, oldName: String, newName: String) {
+        for (node in block.nodes) {
+            if (node is Expr) {
+                refractorExpr((node as Expr).getOrThrow(), oldName, newName)
+            } else if (node is Decl) {
+                refractorDecl((node as Decl).getOrThrow(), oldName, newName)
+            } else if (node is Body) {
+                refractorBody((node as Body).getOrThrow(), oldName, newName)
+            } else if (node is Pattern) {
+                refractorPattern((node as Pattern).getOrThrow(), oldName, newName)
+            } else if (node is TypeNode) {
+                refractorTypeNode((node as TypeNode).getOrThrow(), oldName, newName)
+            } else if (node is ImportContent || node is ImportList || node is Modifier || node is PackageHeader) {
+            } else {
+                throw Exception("node is unknown")
+            }
         }
     }
 
@@ -596,9 +381,9 @@ class CJCodeTool {
         }
         func getDoc(code: String) : String {
             let robot = LLM(url: 'https://api.siliconflow.cn/v1/chat/completions',
-                key: 'sk-pqwthdmbesdwldfllezgjildshqhezpwzjbupqolzijkxjoa',
-                model: 'deepseek-ai/DeepSeek-V3',
-                context: true)
+                            key: 'sk-pqwthdmbesdwldfllezgjildshqhezpwzjbupqolzijkxjoa',
+                            model: 'deepseek-ai/DeepSeek-V3',
+                            context: true)
             return robot.chat(code)
         }
         var program = code.toProgram()

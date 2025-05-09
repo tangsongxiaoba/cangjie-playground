@@ -21,7 +21,7 @@ extend Program {
 }
 
 extend Tokens {
-    func insert(index: Int64, newTokens: Tokens) : Tokens {
+    func insert(index: Int64, newTokens: Tokens): Tokens {
         var front = this[0..index]
         var back = this[index..this.size]
         return front + newTokens + back
