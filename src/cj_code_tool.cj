@@ -651,4 +651,128 @@ class CJCodeTool {
     static func splitPath(path: String): Array<String> {
         return path.split(".", removeEmpty: true)
     }
+
+    static func findUnusedVariables(code: String) : String {
+        func comment(token: Token, tokens: Tokens) : Tokens {
+            for(i in 0..tokens.size) {
+                tokens[i].dump()
+                if(tokens[i].pos.line == token.pos.line) {
+                    return tokens.insertBefore(i, cangjieLex('/* UNUSED VAR*/'))
+                }
+            }
+            return tokens
+        }
+        try {
+            var progTokens = cangjieLex(code)
+            var prog = parseProgram(progTokens)
+
+            let variables = HashSet<MyToken>()
+            for(decl in prog.decls) {
+                findInDecl(decl, variables)
+            }
+
+            var it = variables.iterator()
+            while (true) {
+                var value = it.next()
+                match (value) {
+                    case Some(v) => progTokens = comment(v.getToken(), progTokens)
+                    case None => break
+                }
+            }
+            return progTokens.toString()
+        } catch(e: IllegalInputException) {
+            if (DEBUG) {
+                e.dump()
+            }
+            return e.message
+        }
+    }
+
+    private static func findInDecl(decl: Decl, variables: HashSet<MyToken>) : Unit {
+        if (decl is VarDecl) {
+            // initial condition
+            var vdecl = (decl as VarDecl).getOrThrow()
+            variables.put(MyToken(vdecl.identifier))
+            findInExpr(vdecl.expr, variables)
+        }
+        else if (decl is FuncDecl) {
+            var funct = (decl as FuncDecl).getOrThrow()
+            findInBlock(funct.block, variables)
+        }
+        else if (decl is ClassDecl) {
+            var cdecl = (decl as ClassDecl).getOrThrow()
+            findInDecl(cdecl, variables)
+        }
+        // TODO: illegal exception
+        else {
+            throw IllegalInputException(decl)
+        }
+    }
+
+    private static func findInBlock(block: Block, variables: HashSet<MyToken>) : Unit {
+        for(node in block.nodes) {
+            if(node is Expr) {
+                var expr = (node as Expr).getOrThrow()
+                findInExpr(expr, variables)
+            }
+            else if (node is Decl) {
+                var decl = (node as Decl).getOrThrow()
+                findInDecl(decl, variables)
+            }
+        }
+    }
+
+    private static func findInExpr(expr: Expr, variables: HashSet<MyToken>) : Unit {
+        if(expr is RefExpr) {
+            // base condition
+            var variable = (expr as RefExpr).getOrThrow()
+            if(variables.contains(MyToken(variable.identifier))) {
+                variables.remove(MyToken(variable.identifier))
+            }
+        }
+
+        if(expr is AssignExpr) {
+            var asexpr = (expr as AssignExpr).getOrThrow()
+            findInExpr(asexpr.leftExpr, variables)
+            findInExpr(asexpr.rightExpr, variables)
+        } else if (expr is BinaryExpr) {
+            var bexpr = (expr as BinaryExpr).getOrThrow()
+            findInExpr(bexpr.leftExpr, variables)
+            findInExpr(bexpr.rightExpr, variables)
+        } else if (expr is ForInExpr) {
+            var forexpr = (expr as ForInExpr).getOrThrow()
+            findInBlock(forexpr.block, variables)
+        } else if (expr is IfExpr) {
+            var ifexpr = (expr as IfExpr).getOrThrow()
+            findInExpr(ifexpr.condition, variables)
+            try {
+                findInExpr(ifexpr.elseExpr, variables)
+            } catch (e: ASTException) {}
+            findInBlock(ifexpr.ifBlock, variables)
+        } else if (expr is ParenExpr) {
+            var pexpr = (expr as ParenExpr).getOrThrow()
+            findInExpr(pexpr.parenthesizedExpr, variables)
+        } else if (expr is RangeExpr) {
+            var rexpr = (expr as RangeExpr).getOrThrow()
+            try{
+                findInExpr(rexpr.start, variables)} catch (e: ASTException) {}
+            try{
+                findInExpr(rexpr.end, variables)
+            } catch (e: ASTException) {}
+            try{
+                findInExpr(rexpr.step, variables)
+            } catch (e: ASTException) {}
+        } else if (expr is ReturnExpr) {
+            var retexpr = (expr as ReturnExpr).getOrThrow()
+            findInExpr(retexpr.expr, variables)
+        } else if (expr is UnaryExpr) {
+            var uexpr = (expr as UnaryExpr).getOrThrow()
+            findInExpr(uexpr.expr, variables)
+        } else if (expr is LitConstExpr) {}
+
+        else {
+            throw IllegalInputException(expr)
+        }
+
+    } 
 }

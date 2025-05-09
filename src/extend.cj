@@ -1,6 +1,7 @@
 package playground
 
 import std.ast.*
+import std.core.*
 
 extend String {
     func toProgram(): Program {
@@ -21,9 +22,33 @@ extend Program {
 }
 
 extend Tokens {
-    func insert(index: Int64, newTokens: Tokens): Tokens {
-        var front = this[0..index]
-        var back = this[index..this.size]
-        return front + newTokens + back
+    func insertBefore(index: Int64, newTokens: Tokens): Tokens {
+        return this[0..index].append(newTokens).append(this[index..])
+    }
+}
+
+class MyToken {
+    let token: Token
+
+    public init(token: Token) {
+        this.token = token
+    }
+
+    public func getToken() {
+        return this.token
+    }
+}
+
+extend MyToken <: Equatable<MyToken> & Hashable {
+    public operator func ==(right: MyToken): Bool{
+        this.token.toString() == right.token.toString()
+    }
+
+    public operator func !=(right: MyToken): Bool{
+        this.token.toString() != right.token.toString()
+    }
+
+    public func hashCode() : Int64 {
+        Int64(this.token.toString().hashCode())
     }
 }

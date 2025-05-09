@@ -42,6 +42,15 @@ class C <: I1 {
 """
 
 @Test
+class findUnusedVariablesTest {
+
+    @TestCase
+    private func findUnusedVariablesTest() {
+        println(CJCodeTool.findUnusedVariables(code))
+    }
+}
+
+@Test
 class GenerateCodeSignatureTest {
 
     @TestCase
