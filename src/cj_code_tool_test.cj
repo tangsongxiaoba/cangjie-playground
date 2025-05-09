@@ -3,77 +3,7 @@ package playground
 import std.ast.*
 import std.fs.*
 
-func readFile(): String {
-    let file = File.openRead("src/Cangjie-Examples-a/BTree/class.cj")
-    let bytes = file.readToEnd()
-    var code = ""
-    for (byte in bytes) {
-        code += Rune(byte).toString()
-    }
-    return code
-}
-
-@Test
-class GenerateCodeSignatureTest {
-    private let code = readFile()
-
-    @TestCase
-    private func testGenerateCodeSignature() {
-        let sig = CJCodeTool.generateCodeSignature(code)
-        println(sig)
-    }
-}
-
-@Test
-class FindDeclByPathTest {
-    private let code = """
-interface I1 {
-    mut prop size: Int64
-}
-
-class C <: I1 {
-    private var mySize = 0
-
-    public mut prop size: Int64 {
-        get() {
-            mySize
-        }
-        set(value) {
-            mySize = value
-        }
-    }
-
-    public func getSize() {
-        mySize
-    }
-}
-
-public func testC() {
-    let a: I1 = C()
-    a.size = 5
-    println(a.size)
-}
-"""
-
-    @TestCase
-    private func testFindDeclByPath() {
-        let prog = code.toProgram()
-        let paths = CJCodeTool.splitPath("C.getSize")
-        let decl = CJCodeTool.findDeclByPath(prog, paths)
-        decl.dump()
-    }
-}
-
-@Test
-class FoldConstantTest {
-    private let code = 
-"""
-
-let a = 1 + 2
-let b = ((3 * 4) + 5) + (a + 4) * (5 * 3 + 9)
-var c = 31 / 4
-var d = 114.514 + 111111000
-
+let code = """
 interface I1 {
     mut prop size: Int64
 }
@@ -111,6 +41,18 @@ func testRange() {
 }
 """
 
+@Test
+class GenerateCodeSignatureTest {
+
+    @TestCase
+    private func testGenerateCodeSignature() {
+        println(CJCodeTool.generateCodeSignature(code))
+    }
+}
+
+@Test
+class FoldConstantTest {
+
     @TestCase
     private func testFoldConstant() {
         println(CJCodeTool.foldConstant(code))
@@ -119,35 +61,7 @@ func testRange() {
 
 @Test
 class GenerateDocumentTest {
-    private let code = """
-interface I1 {
-    mut prop size: Int64
-}
-
-class C <: I1 {
-    private var mySize = 0
-
-    public mut prop size: Int64 {
-        get() {
-            mySize
-        }
-        set(value) {
-            mySize = value
-        }
-    }
-
-    public func getSize() {
-        mySize
-    }
-}
-
-public func testC() {
-    let a: I1 = C()
-    a.size = 5
-    println(a.size)
-}
-"""
-    private let path = "C.getSize"
+    private let path = "C.myfunc"
 
     @TestCase
     private func testGenerateDocument() {
