@@ -5,12 +5,6 @@ import std.collection.*
 import std.convert.*
 
 class CJCodeTool {
-    private static func debug(string: String) {
-        if (true) {
-            println(string)
-        }
-    }
-
     static func generateCodeSignature(code: String): String {
         var signature = Tokens()
         let tks = cangjieLex(code)
@@ -20,20 +14,17 @@ class CJCodeTool {
                 let (decl, mid) = parseDeclFragment(tks, startFrom: start)
                 start = mid 
 
-                for (m in decl.modifiers) { // modifiers can be null
+                for (m in decl.modifiers) {
                     signature += m.toTokens()
                 }
                 signature += decl.keyword
                 signature += decl.identifier
 
                 if (decl is ClassDecl) {
-                    debug("decl is ClassDecl")
                     signature += parseClassDecl(decl)
                 } else if (decl is InterfaceDecl) {
-                    debug("decl is InterfaceDecl")
                     signature += parseInterfaceDecl(decl)
                 } else if (decl is FuncDecl) {
-                    debug("decl is FuncDecl")
                     signature += parseFuncDecl(decl)
                 } else {
                     throw Exception("decl is unknown")
@@ -152,31 +143,22 @@ class CJCodeTool {
             isFirstDecl = false
             for (m in decl.modifiers) {
                 signature += m.toTokens() // modifiers can be null
-                debug("modifier is " + m.toTokens().toString())
             }
             if (decl.keyword.toString() == decl.identifier.toString()) {
                 // keyword and identifier are the same: "init"
                 signature += decl.keyword
             } else {
                 signature += decl.keyword
-                debug("keyword is " + decl.keyword.toString())
                 signature += decl.identifier
-                debug("identifier is " + decl.identifier.toString())
             }
             if (decl is VarDecl) {
-                debug("decl is VarDecl")
                 signature += parseVarDecl(decl)
             } else if (decl is PropDecl) {
-                debug("decl is PropDecl")
                 signature += parsePropDecl(decl)
             } else if (decl is FuncDecl) {
-                debug("decl is FuncDecl")
                 signature += parseFuncDecl(decl)
             } else {
-                if (decl is PrimaryCtorDecl) {
-                    debug("decl is PrimaryCtorDecl")
-                }
-                throw Exception("decl is unknow")
+                throw Exception("decl is unknown")
             }
         }
         return signature
@@ -233,13 +215,10 @@ class CJCodeTool {
                     decl.identifier = Token(TokenKind.IDENTIFIER, newName)
                 }
                 if (decl is ClassDecl) {
-                    debug("decl is classDecl")
                     refractorClassDecl(decl, oldName, newName)
                 } else if (decl is FuncDecl) {
-                    debug("decl is funcDecl")
                     refractorFuncDecl(decl, oldName, newName)
                 } else if (decl is VarDecl) {
-                    debug("decl is varDecl")
                     refractorVarDecl(decl, oldName, newName)
                 } else {
                     throw Exception("decl is unknown")
@@ -311,32 +290,22 @@ class CJCodeTool {
     // 仓颉语法树节点的父类
     private static func refractorNode(node: Node, oldName: String, newName: String) {
         if (node is Expr) {
-            debug("node is expr")
             refractorExpr(node, oldName, newName)
         } else if (node is Decl) {
-            debug("node is decl")
             refractorDecl(node, oldName, newName)
-            debug("declOK")
         } else if (node is Body) {
-            debug("node is body")
             refractorBody(node, oldName, newName)
         } else if (node is ImportContent) {
-            debug("node is importContent")
             refractorImportContent(node, oldName, newName)
         } else if (node is ImportList) {
-            debug("node is importList")
             refractorImportList(node, oldName, newName)
         } else if (node is Modifier) {
-            debug("node is modifier")
             refractorModifier(node, oldName, newName)
         } else if (node is PackageHeader) {
-            debug("node is packageHeader")
             refractorPackageHeader(node, oldName, newName)
         } else if (node is Pattern) {
-            debug("node is pattern")
             refractorPattern(node, oldName, newName)
         } else if (node is TypeNode) {
-            debug("node is typeNode")
             refractorTypeNode(node, oldName, newName)
         } else {
             throw Exception("node is unknown")
@@ -349,37 +318,26 @@ class CJCodeTool {
         match (expr) {
             case Some(expr) =>
                 if (expr is AssignExpr) {
-                    debug("expr is assignExpr")
                     refractorAssignExpr(expr, oldName, newName)
                 } else if (expr is BinaryExpr) {
-                    debug("expr is binaryExpr")
                     refractorBinaryExpr(expr, oldName, newName)
                 } else if (expr is Block) {
-                    debug("expr is block")
                     refractorBinaryExpr(expr, oldName, newName)
                 } else if (expr is ForInExpr) {
-                    debug("expr is forInExpr")
                     refractorForInExpr(expr, oldName, newName)
                 } else if (expr is IfExpr) {
-                    debug("expr is ifExpr")
                     refractorIfExpr(expr, oldName, newName)
                 } else if (expr is LitConstExpr) {
-                    debug("expr is litConstExpr")
                     refractorLitConstExpr(expr, oldName, newName)
                 } else if (expr is ParenExpr) {
-                    debug("expr is parenExpr")
                     refractorParenExpr(expr, oldName, newName)
                 } else if (expr is RangeExpr) {
-                    debug("expr is rangeExpr")
                     refractorRangeExpr(expr, oldName, newName)
                 } else if (expr is RefExpr) {
-                    debug("expr is refExpr")
                     refractorRefExpr(expr, oldName, newName)
                 } else if (expr is ReturnExpr) {
-                    debug("expr is returnExpr")
                     refractorReturnExpr(expr, oldName, newName)
                 } else if (expr is UnaryExpr) {
-                    debug("expr is unaryExpr")
                     refractorUnaryExpr(expr, oldName, newName)
                 } else {  
                     throw Exception("expr is unknown")
@@ -413,7 +371,6 @@ class CJCodeTool {
     private static func refractorPattern(node: Node, oldName: String, newName: String) {
         var pattern = node as Pattern
         if (pattern is VarPattern) {
-            debug("pattern is varPattern")
             refractorVarPattern(node, oldName, newName)
         } else {
             throw Exception("pattern is unknown")
@@ -442,10 +399,8 @@ class CJCodeTool {
                     typeNode.typeParameterName = Token(TokenKind.IDENTIFIER, newName)
                 }
                 if (typeNode is PrimitiveType) {
-                    debug("typeNode is primitiveType")
                     refractorPrimitiveType(typeNode, oldName, newName)
                 } else if (typeNode is RefType) {
-                    debug("typeNode is refType")
                     refractorRefType(typeNode, oldName, newName)
                 } else {
                     throw Exception("typeNode is unknown")
@@ -503,9 +458,7 @@ class CJCodeTool {
         match (block) {
             case Some(block) =>
                 for (node in block.nodes) {
-                    debug("nodeIn")
                     refractorNode(node, oldName, newName)
-                    debug("nodeOk")
                 }
             case None =>
                 throw ASTException("node is not an block")
