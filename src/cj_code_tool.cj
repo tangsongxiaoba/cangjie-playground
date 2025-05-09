@@ -609,7 +609,6 @@ class CJCodeTool {
             return robot.chat(code)
         }
 
-    
     try{
         var program = code.toProgram()
         var programTokens = program.toTokens()
@@ -649,8 +648,10 @@ class CJCodeTool {
                 foldConstForDecl(decl)
             }
             return program.toString()
+        } catch(e: IllegalInputException) {
+            e.message
         } catch(e: Exception) {
-            return "ILLEGAL INPUT"
+            throw e
         }
     }
 
@@ -672,7 +673,7 @@ class CJCodeTool {
                 foldConstForDecl(ddecl)
             }
         } else {
-            throw Exception('unknown decl type')
+            throw IllegalInputException()
         }
     }
 
@@ -747,7 +748,7 @@ class CJCodeTool {
         }
         else {
             // unexpected expression type
-            throw Exception('unknown expr type')
+            throw IllegalInputException()
         }
         return expr
     }
