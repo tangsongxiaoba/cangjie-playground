@@ -828,16 +828,16 @@ class CJCodeTool {
         }
         
         if (paths.size > 2) {
-            throw Exception("paths cannot be more than two elements")
+            throw IllegalInputException()
         }
         let topPath: String = paths[0]
-        let topDecl = findDecl(prog.decls, topPath) ?? throw Exception("cannot find top declaration")
+        let topDecl = findDecl(prog.decls, topPath) ?? throw IllegalInputException()
         if (paths.size == 1) {
             return topDecl
         }
-        let classDecl = topDecl as ClassDecl ?? throw Exception("top declaration is not a ClassDecl") 
+        let classDecl = topDecl as ClassDecl ?? throw throw IllegalInputException()
         let subPath: String = paths[1]
-        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw Exception("cannot find sub declaration")
+        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw throw IllegalInputException()
         return subDecl
     }
 
