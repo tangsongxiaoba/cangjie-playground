@@ -379,6 +379,13 @@ class CJCodeTool {
             }
             return None
         }
+        func getPreLine(index: Int64, tokens: Tokens) : Int32 {
+            var preIndex = index - 1
+            while(tokens.get(preIndex).kind == TokenKind.NL) {
+                preIndex--
+            }
+            return tokens.get(preIndex).pos.line
+        }
         func getDoc(code: String) : String {
             let robot = LLM(url: 'https://api.siliconflow.cn/v1/chat/completions',
                             key: 'sk-pqwthdmbesdwldfllezgjildshqhezpwzjbupqolzijkxjoa',
@@ -386,21 +393,34 @@ class CJCodeTool {
                             context: true)
             return robot.chat(code)
         }
-        var program = code.toProgram()
-        var programTokens = program.toTokens()
-        var decl = findDeclByPath(program, splitPath(path))
-        var strDecl = decl.toTokens().toString()
-        let col = decl.toTokens().get(0).pos.column
-        let line = decl.toTokens().get(0).pos.line
-        let ret = getDoc(strDecl)
-        var retBuilder = StringBuilder()
-        retBuilder.append(addSpace(col, '/*'))
-        retBuilder.append(addSpace(col, ret))
-        retBuilder.append(addSpace(col, '*/'))
 
-        let index : Int64 = getIndex(programTokens, decl) ?? throw Exception("cannot get index of decl")
-        
-        return programTokens.insert(index, cangjieLex(retBuilder.toString())).toString()
+        try{
+            var program = code.toProgram()
+            var programTokens = program.toTokens()
+            var decl = findDeclByPath(program, splitPath(path))
+
+            let col = decl.toTokens().get(0).pos.column
+            let line = decl.toTokens().get(0).pos.line
+            let index : Int64 = getIndex(programTokens, decl) ?? throw Exception("cannot get index of decl")
+            let preline = getPreLine(index, programTokens)
+
+            var retBuilder = StringBuilder()
+            for(i in 1..line-preline) {
+                retBuilder.append('\n')
+            }
+
+            var strDecl = decl.toTokens().toString()
+            let ret = getDoc(strDecl)
+            retBuilder.append(addSpace(col, '/*'))
+            retBuilder.append(addSpace(col, ret))
+            retBuilder.append(addSpace(col, '*/'))
+
+            return programTokens.insert(index, cangjieLex(retBuilder.toString())).toString()
+        } catch(e: IllegalInputException) {
+            e.message
+        } catch(e: Exception) {
+            throw e
+        }
     }
 
     /*
@@ -413,8 +433,10 @@ class CJCodeTool {
                 foldConstForDecl(decl)
             }
             return program.toString()
+        } catch(e: IllegalInputException) {
+            e.message
         } catch(e: Exception) {
-            return "ILLEGAL INPUT"
+            throw e
         }
     }
 
@@ -436,7 +458,7 @@ class CJCodeTool {
                 foldConstForDecl(ddecl)
             }
         } else {
-            throw Exception('unknown decl type')
+            throw IllegalInputException()
         }
     }
 
@@ -511,7 +533,7 @@ class CJCodeTool {
         }
         else {
             // unexpected expression type
-            throw Exception('unknown expr type')
+            throw IllegalInputException()
         }
         return expr
     }
@@ -594,16 +616,16 @@ class CJCodeTool {
         }
         
         if (paths.size > 2) {
-            throw Exception("paths cannot be more than two elements")
+            throw IllegalInputException()
         }
         let topPath: String = paths[0]
-        let topDecl = findDecl(prog.decls, topPath) ?? throw Exception("cannot find top declaration")
+        let topDecl = findDecl(prog.decls, topPath) ?? throw IllegalInputException()
         if (paths.size == 1) {
             return topDecl
         }
-        let classDecl = topDecl as ClassDecl ?? throw Exception("top declaration is not a ClassDecl") 
+        let classDecl = topDecl as ClassDecl ?? throw IllegalInputException()
         let subPath: String = paths[1]
-        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw Exception("cannot find sub declaration")
+        let subDecl = findDecl(classDecl.body.decls, subPath) ?? throw IllegalInputException()
         return subDecl
     }
 
