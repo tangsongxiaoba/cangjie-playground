@@ -221,21 +221,6 @@ class CJCodeTool {
             try {
                 refractorPattern(varDecl.pattern, oldName, newName) // pattern can be null
             } catch (e: ASTException) {}
-        } else if (decl is InterfaceDecl) {
-            let interfaceDecl = (decl as InterfaceDecl).getOrThrow()
-            for (superType in interfaceDecl.superTypes) {
-                refractorTypeNode(superType, oldName, newName)
-            }
-            refractorBody(interfaceDecl.body, oldName, newName)
-        } else if (decl is PropDecl) {
-            let propDecl = (decl as PropDecl).getOrThrow()
-            propDecl.identifier = refractorIdentifier(propDecl.identifier, oldName, newName)
-            try {
-                refractorDecl(propDecl.setter, oldName, newName)
-            } catch (e: ASTException) {}
-            try {
-                refractorDecl(propDecl.getter, oldName, newName)
-            } catch (e: ASTException) {}
         } else {
             throw IllegalInputException(decl)
         }
@@ -352,7 +337,7 @@ class CJCodeTool {
                 refractorPattern((node as Pattern).getOrThrow(), oldName, newName)
             } else if (node is TypeNode) {
                 refractorTypeNode((node as TypeNode).getOrThrow(), oldName, newName)
-            } else if (node is ImportContent || node is ImportList || node is Modifier || node is PackageHeader) {
+            } else if (node is ImportContent || node is ImportList) {
             } else {
                 throw IllegalInputException(block)
             }
