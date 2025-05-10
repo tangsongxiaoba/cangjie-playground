@@ -461,19 +461,6 @@ class CJCodeTool {
             for(ddecl in ndecl.body.decls) {
                 foldConstForDecl(ddecl)
             }
-        } else if (decl is InterfaceDecl) {
-            var ndecl = (decl as InterfaceDecl).getOrThrow()
-            for (ddecl in ndecl.body.decls) {
-                foldConstForDecl(ddecl)
-            }
-        } else if (decl is PropDecl) {
-            var ndecl = (decl as PropDecl).getOrThrow()
-            try {
-                foldConstForDecl(ndecl.getter)
-            } catch (e: ASTException) {}
-            try {
-                foldConstForDecl(ndecl.setter)
-            } catch (e: ASTException) {}
         } else {
             throw IllegalInputException(decl)
         }
