@@ -129,7 +129,8 @@ class Point {
         let message = encode(I, input)
         let content =
             '{"model":"${model}","messages":[${history}${message}],"stream":${stream}}'
-        if (context) { history.append(message) }
+        if (this.context) { history.append(message + ',') }
+
         let request = HttpRequestBuilder()
             .url(url)
             .header('Authorization', 'Bearer ${key}')
@@ -142,13 +143,20 @@ class Point {
             .body(content)
             .post()
             .build()
-        client.send(request)
+        let response = client.send(request) // 获取响应
+
+        if (response.status < 200 || response.status >= 300) {
+            let errorBody = StringReader(response.body).readToEnd()
+            let errorMessage = "LLM API 请求失败。URL: ${this.url}, 模型: ${this.model}, 状态码: ${response.status}. 响应体: ${errorBody}"
+            println(errorMessage) // 打印错误到控制台
+            throw Exception(errorMessage) // 抛出异常
+        }
+        return response
     }
 
     func parse(text: String, stream!: Bool = false) {
         let json = JsonValue.fromStr(text).asObject()
         let choices = json.getFields()['choices'].asArray()
-        // 流式和非流式情况下，这个字段名称不同
         let key = if (stream) { 'delta' } else { 'message' }
         let message = choices[0].asObject().getFields()[key].asObject()
         let content = message.getFields()['content'].asString().getValue()
@@ -157,10 +165,16 @@ class Point {
 
     // 非流式
     public func chat(input: String) {
-        println("chating...")
-        let response = send(input)
-        let output = StringReader(response.body).readToEnd() |> parse
-        return output
+        println("LLM chating...")
+        try {
+            let response = send(input)
+            let output = StringReader(response.body).readToEnd() |> parse
+            return output
+        } catch (e: Exception) {
+            throw e
+        } finally {
+            println("finish LLM chat.")
+        }
     }
 
     public func reset() {

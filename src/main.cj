@@ -76,7 +76,6 @@ main() {
                 sendErrorResponse(res, "Server error: " + e.message, 500)
             }
         } else if (req.method == "OPTIONS") {
-            println("[LOG] Handling general OPTIONS request for: " + req.toString())
             sendCorsPreflightResponse(res)
         } else {
             sendErrorResponse(res, "Method Not Allowed", 405)
@@ -135,6 +134,11 @@ main() {
                 let requestJson = JsonValue.fromStr(content).asObject()
                 let code = requestJson.get("code").getOrThrow().asString().getValue()
                 let path = requestJson.get("path").getOrThrow().asString().getValue()
+                let apiKey = requestJson.get("apiKey").getOrThrow().asString().getValue()
+                let apiUrl = requestJson.get("apiUrl").getOrThrow().asString().getValue()
+                let modelName = requestJson.get("modelName").getOrThrow().asString().getValue()
+                
+                CJCodeTool.configureLLM(apiUrl, apiKey, modelName)
 
                 if (code.isEmpty() || path.isEmpty()) {
                     sendErrorResponse(res, "Missing required fields (code, path).", 400)

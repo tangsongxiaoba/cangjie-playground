@@ -7,6 +7,16 @@ import std.convert.*
 let DEBUG = true
 
 class CJCodeTool {
+    private static var llmApiUrl: Option<String> = None
+    private static var llmApiKey: Option<String> = None
+    private static var modelName: Option<String> = None
+
+    static func configureLLM(apiUrl: String, apiKey: String, modelName: String) {
+        if (!apiUrl.isEmpty()) {CJCodeTool.llmApiUrl = apiUrl}
+        if (!apiKey.isEmpty()) {CJCodeTool.llmApiKey = apiKey}
+        if (!modelName.isEmpty()) {CJCodeTool.modelName = modelName}
+    }
+
     /*
     为代码中所有的函数、类和接口生成签名
     */
@@ -386,9 +396,9 @@ class CJCodeTool {
             return None
         }
         func getDoc(code: String) : String {
-            let robot = LLM(url: 'https://api.siliconflow.cn/v1/chat/completions',
-                            key: 'sk-pqwthdmbesdwldfllezgjildshqhezpwzjbupqolzijkxjoa',
-                            model: 'deepseek-ai/DeepSeek-V3',
+            let robot = LLM(url: CJCodeTool.llmApiUrl.getOrThrow(),
+                            key: CJCodeTool.llmApiKey.getOrThrow(),
+                            model: CJCodeTool.modelName.getOrThrow(),
                             context: true)
             return robot.chat(code)
         }
