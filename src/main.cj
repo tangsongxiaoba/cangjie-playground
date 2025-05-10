@@ -58,6 +58,7 @@ main() {
                     signature = CJCodeTool.generateCodeSignature(code)
                 } catch (e: IllegalInputException) {
                     e.dump()
+                    e.printStackTrace()
                     sendErrorResponse(res, e.message, 400)
                     return
                 } catch (e: Exception) {
@@ -102,6 +103,7 @@ main() {
                     refactoredCode = CJCodeTool.refractorVariable(code, path, oldName, newName)
                 } catch (e: IllegalInputException) {
                     e.dump()
+                    e.printStackTrace()
                     sendErrorResponse(res, e.message, 400)
                     return
                 } catch (e: Exception) {
@@ -150,6 +152,7 @@ main() {
                     documentedCode = CJCodeTool.generateDocument(code, path)
                 } catch (e: IllegalInputException) {
                     e.dump()
+                    e.printStackTrace()
                     sendErrorResponse(res, e.message, 400)
                     return
                 } catch (e: Exception) {
@@ -192,6 +195,7 @@ main() {
                     foldedCode = CJCodeTool.foldConstant(code)
                 } catch (e: IllegalInputException) {
                     e.dump()
+                    e.printStackTrace()
                     sendErrorResponse(res, e.message, 400)
                     return
                 } catch (e: Exception) {
@@ -234,6 +238,7 @@ main() {
                     modifiedCode = CJCodeTool.findUnusedVariables(code)
                 } catch (e: IllegalInputException) {
                     e.dump()
+                    e.printStackTrace()
                     sendErrorResponse(res, e.message, 400)
                     return
                 } catch (e: Exception) {

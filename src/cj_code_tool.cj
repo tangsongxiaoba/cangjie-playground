@@ -4,8 +4,6 @@ import std.ast.*
 import std.collection.*
 import std.convert.*
 
-let DEBUG = true
-
 class CJCodeTool {
     private static var llmApiUrl: Option<String> = None
     private static var llmApiKey: Option<String> = None
@@ -267,7 +265,9 @@ class CJCodeTool {
         } else if (expr is IfExpr) {
             let ifExpr = (expr as IfExpr).getOrThrow()
             refractorExpr(ifExpr.condition, oldName, newName)
-            refractorExpr(ifExpr.elseExpr, oldName, newName)
+            try {
+                refractorExpr(ifExpr.elseExpr, oldName, newName)
+            } catch (e: ASTException) { }
             refractorBlock(ifExpr.ifBlock, oldName, newName)
         } else if (expr is LitConstExpr) {
         } else if (expr is ParenExpr) {
@@ -399,11 +399,6 @@ class CJCodeTool {
             let ret = getDoc(strDecl)
             retBuilder.append(addIndent(col, ret))
             return cangjieLex(progTokens[0..index].toString() + retBuilder.toString() + progTokens[index..].toString()).toString()
-        } catch(e: IllegalInputException) {
-            if(DEBUG) {
-                e.dump()
-            }
-            e.message
         } catch(e: Exception) {
             throw e
         }
@@ -419,11 +414,6 @@ class CJCodeTool {
                 foldConstForDecl(decl)
             }
             return prog.toString()
-        } catch(e: IllegalInputException) {
-            if (DEBUG) {
-                e.dump()
-            }
-            return e.message
         } catch(e: Exception) {
             throw e
         }
@@ -519,8 +509,7 @@ class CJCodeTool {
             } catch(e: ASTException) {}
         } else if (expr is UnaryExpr || expr is RefExpr) {
             // No need to fold?
-        }
-        else {
+        } else {
             throw IllegalInputException(expr)
         }
         return expr
@@ -676,11 +665,8 @@ class CJCodeTool {
             }
 
             return progTokens.toString()
-        } catch(e: IllegalInputException) {
-            if (DEBUG) {
-                e.dump()
-            }
-            return e.message
+        } catch(e: Exception) {
+            throw e
         }
     }
 
