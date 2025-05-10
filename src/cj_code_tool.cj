@@ -657,28 +657,54 @@ class CJCodeTool {
             for(i in 0..tokens.size) {
                 tokens[i].dump()
                 if(tokens[i].pos.line == token.pos.line) {
-                    return tokens.insertBefore(i, cangjieLex('/* UNUSED VAR*/'))
+                    return tokens.insertBefore(i, cangjieLex('/* UNUSED VAR */'))
                 }
             }
             return tokens
         }
-        try {
-            var progTokens = cangjieLex(code)
-            var prog = parseProgram(progTokens)
-
-            let variables = HashSet<MyToken>()
-            for(decl in prog.decls) {
-                findInDecl(decl, variables)
-            }
-
+        func addComment(variables: HashSet<MyToken>, tokens: Tokens) {
             var it = variables.iterator()
+            var ntokens = tokens
             while (true) {
                 var value = it.next()
                 match (value) {
-                    case Some(v) => progTokens = comment(v.getToken(), progTokens)
+                    case Some(v) => ntokens = comment(v.getToken(), ntokens)
                     case None => break
                 }
             }
+            return ntokens
+        }
+        func findFunc(decl: Decl, tokens: Tokens) : Tokens {
+            var progTokens = tokens
+            if (decl is FuncDecl) {
+                let variables = HashSet<MyToken>()
+                var funct = (decl as FuncDecl).getOrThrow()
+                findInBlock(funct.block, variables)
+                progTokens = addComment(variables, progTokens)
+            } else if (decl is ClassDecl) {
+                let variables = HashSet<MyToken>()
+                var cdecl = (decl as ClassDecl).getOrThrow()
+                for (ddecl in cdecl.body.decls) {
+                    progTokens = findFunc(ddecl, progTokens)
+                }
+                progTokens = addComment(variables, progTokens)
+            } else if (decl is VarDecl) {/* ignore it*/}
+            else {
+                throw IllegalInputException(decl)
+            }
+            return progTokens
+        }
+        
+        try {
+            var progTokens = cangjieLex(code)
+            var prog = parseProgram(progTokens)
+            prog.dump()
+
+            // let variables = HashSet<MyToken>()
+            for(decl in prog.decls) {
+                progTokens = findFunc(decl, progTokens)
+            }
+
             return progTokens.toString()
         } catch(e: IllegalInputException) {
             if (DEBUG) {
@@ -701,9 +727,10 @@ class CJCodeTool {
         }
         else if (decl is ClassDecl) {
             var cdecl = (decl as ClassDecl).getOrThrow()
-            findInDecl(cdecl, variables)
+            for (ddecl in cdecl.body.decls) {
+                findInDecl(ddecl, variables)
+            }
         }
-        // TODO: illegal exception
         else {
             throw IllegalInputException(decl)
         }
@@ -729,9 +756,7 @@ class CJCodeTool {
             if(variables.contains(MyToken(variable.identifier))) {
                 variables.remove(MyToken(variable.identifier))
             }
-        }
-
-        if(expr is AssignExpr) {
+        } else if(expr is AssignExpr) {
             var asexpr = (expr as AssignExpr).getOrThrow()
             findInExpr(asexpr.leftExpr, variables)
             findInExpr(asexpr.rightExpr, variables)
