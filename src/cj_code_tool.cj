@@ -34,11 +34,6 @@ class CJCodeTool {
                 } else {
                     throw IllegalInputException(decl)
                 }
-            } catch (e: IllegalInputException) {
-                if (DEBUG) {
-                    e.dump()
-                }
-                return e.message
             } catch (e: Exception) {
                 throw e
             }
@@ -186,11 +181,6 @@ class CJCodeTool {
             var decl = findDeclByPath(prog, splitPath(path))
             refractorDecl(decl, oldName, newName)
             return prog.toString()
-        } catch (e: IllegalInputException) {
-            if (DEBUG) {
-                e.dump()
-            }
-            return e.message
         } catch (e: Exception) {
             throw e
         }
