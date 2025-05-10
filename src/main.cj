@@ -217,5 +217,46 @@ main() {
         }
     })
 
+    server.route("/api/cj-tool/find-unused-variables", { req, res =>
+        if (req.method == "POST") {
+            try {
+                let content = StringReader(req.body).readToEnd()
+                let requestJson = JsonValue.fromStr(content).asObject()
+                let code = requestJson.get("code").getOrThrow().asString().getValue()
+
+                if (code.isEmpty()) {
+                    sendErrorResponse(res, "Input code cannot be empty.", 400)
+                    return
+                }
+
+                var modifiedCode: String
+                try {
+                    modifiedCode = CJCodeTool.findUnusedVariables(code)
+                } catch (e: IllegalInputException) {
+                    e.dump()
+                    sendErrorResponse(res, e.message, 400)
+                    return
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    sendErrorResponse(res, "Error occurred, check logs.", 500)
+                    return
+                }
+
+                let data = JsonObject()
+                data.put("modifiedCode", JsonString(modifiedCode))
+                sendSuccessResponse(res, data)
+
+            } catch (e: JsonException) {
+                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400)
+            } catch (e: Exception) {
+                sendErrorResponse(res, "Server error: " + e.message, 500)
+            }
+        } else if (req.method == "OPTIONS") {
+            sendCorsPreflightResponse(res)
+        } else {
+            sendErrorResponse(res, "Method Not Allowed", 405)
+        }
+    })
+
     server.start()
 }

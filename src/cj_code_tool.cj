@@ -627,7 +627,6 @@ class CJCodeTool {
     static func findUnusedVariables(code: String) : String {
         func comment(token: Token, tokens: Tokens) : Tokens {
             for(i in 0..tokens.size) {
-                tokens[i].dump()
                 if(tokens[i].pos.line == token.pos.line) {
                     return tokens.insertBefore(i, cangjieLex('/* UNUSED VAR */'))
                 }
@@ -670,7 +669,6 @@ class CJCodeTool {
         try {
             var progTokens = cangjieLex(code)
             var prog = parseProgram(progTokens)
-            prog.dump()
 
             // let variables = HashSet<MyToken>()
             for(decl in prog.decls) {
