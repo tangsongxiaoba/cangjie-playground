@@ -410,13 +410,12 @@ class CJCodeTool {
     static func foldConstant(str: String) : String {
         try {
             let prog = str.toProgram()
-            // prog.dump()
             for(decl in prog.decls) {
                 foldConstForDecl(decl)
             }
             return prog.toString()
-        } catch(e: IllegalInputException) {
-            e.message
+        } catch(e: Exception) {
+            throw e
         }
     }
 
@@ -424,27 +423,23 @@ class CJCodeTool {
     对定义进行折叠常量处理
     */
     private static func foldConstForDecl(decl: Decl): Unit {
-        try {
-            if (decl is VarDecl) {
-                try {
-                    var ndecl = (decl as VarDecl).getOrThrow()
-                    ndecl.expr = foldConstForExpr(ndecl.expr)
-                } catch(e: ASTException) {}
+        if (decl is VarDecl) {
+            try {
+                var ndecl = (decl as VarDecl).getOrThrow()
+                ndecl.expr = foldConstForExpr(ndecl.expr)
+            } catch(e: ASTException) {}
+        }
+        else if (decl is FuncDecl) {
+            var ndecl = (decl as FuncDecl).getOrThrow()
+            foldConstForBlock(ndecl.block)
+        }
+        else if (decl is ClassDecl) {
+            var ndecl = (decl as ClassDecl).getOrThrow()
+            for(ddecl in ndecl.body.decls) {
+                foldConstForDecl(ddecl)
             }
-            else if (decl is FuncDecl) {
-                var ndecl = (decl as FuncDecl).getOrThrow()
-                foldConstForBlock(ndecl.block)
-            }
-            else if (decl is ClassDecl) {
-                var ndecl = (decl as ClassDecl).getOrThrow()
-                for(ddecl in ndecl.body.decls) {
-                    foldConstForDecl(ddecl)
-                }
-            } else {
-                throw IllegalInputException(decl)
-            }
-        } catch(e: IllegalInputException) {
-            e.message
+        } else {
+            throw IllegalInputException(decl)
         }
     }
 
@@ -452,19 +447,15 @@ class CJCodeTool {
     对块进行折叠常量处理
     */
     static func foldConstForBlock(block : Block) : Unit {
-        try {
-            for(node in block.nodes) {
-                if (node is Expr) {
-                    var expr = (node as Expr).getOrThrow()
-                    expr = foldConstForExpr(expr)
-                }
-                else if (node is Decl) {
-                    var decl = (node as Decl).getOrThrow()
-                    foldConstForDecl(decl)
-                }
+        for(node in block.nodes) {
+            if (node is Expr) {
+                var expr = (node as Expr).getOrThrow()
+                expr = foldConstForExpr(expr)
             }
-        } catch(e: IllegalInputException) {
-            e.message
+            else if (node is Decl) {
+                var decl = (node as Decl).getOrThrow()
+                foldConstForDecl(decl)
+            }
         }
     }
 
@@ -676,16 +667,12 @@ class CJCodeTool {
         try {
             var progTokens = cangjieLex(code)
             var prog = parseProgram(progTokens)
-            prog.dump()
-            // let variables = HashSet<MyToken>()
             for(decl in prog.decls) {
                 progTokens = findFunc(decl, progTokens)
             }
-
             return progTokens.toString()
-        } catch(e: IllegalInputException) {
-            e.dump()
-            e.message
+        } catch(e: Exception) {
+            throw e
         }
     }
 
@@ -726,7 +713,6 @@ class CJCodeTool {
 
     private static func findInExpr(expr: Expr, variables: HashSet<MyToken>) : Unit {
         if(expr is RefExpr) {
-            // base condition
             var variable = (expr as RefExpr).getOrThrow()
             if(variables.contains(MyToken(variable.identifier))) {
                 variables.remove(MyToken(variable.identifier))
@@ -771,11 +757,9 @@ class CJCodeTool {
         } else if (expr is Block) {
             var block = (expr as Block).getOrThrow()
             findInBlock(block, variables)
-        } 
-        
-        else if (expr is LitConstExpr) {}
+        } else if (expr is LitConstExpr) {
 
-        else {
+        } else {
             throw IllegalInputException(expr)
         }
 
