@@ -410,12 +410,13 @@ class CJCodeTool {
     static func foldConstant(str: String) : String {
         try {
             let prog = str.toProgram()
+            // prog.dump()
             for(decl in prog.decls) {
                 foldConstForDecl(decl)
             }
             return prog.toString()
-        } catch(e: Exception) {
-            throw e
+        } catch(e: IllegalInputException) {
+            e.message
         }
     }
 
@@ -423,37 +424,47 @@ class CJCodeTool {
     对定义进行折叠常量处理
     */
     private static func foldConstForDecl(decl: Decl): Unit {
-        if (decl is VarDecl) {
-            var ndecl = (decl as VarDecl).getOrThrow()
-            ndecl.expr = foldConstForExpr(ndecl.expr)
-        }
-        else if (decl is FuncDecl) {
-            var ndecl = (decl as FuncDecl).getOrThrow()
-            foldConstForBlock(ndecl.block)
-        }
-        else if (decl is ClassDecl) {
-            var ndecl = (decl as ClassDecl).getOrThrow()
-            for(ddecl in ndecl.body.decls) {
-                foldConstForDecl(ddecl)
+        try {
+            if (decl is VarDecl) {
+                try {
+                    var ndecl = (decl as VarDecl).getOrThrow()
+                    ndecl.expr = foldConstForExpr(ndecl.expr)
+                } catch(e: ASTException) {}
             }
-        } else {
-            throw IllegalInputException(decl)
+            else if (decl is FuncDecl) {
+                var ndecl = (decl as FuncDecl).getOrThrow()
+                foldConstForBlock(ndecl.block)
+            }
+            else if (decl is ClassDecl) {
+                var ndecl = (decl as ClassDecl).getOrThrow()
+                for(ddecl in ndecl.body.decls) {
+                    foldConstForDecl(ddecl)
+                }
+            } else {
+                throw IllegalInputException(decl)
+            }
+        } catch(e: IllegalInputException) {
+            e.message
         }
     }
 
     /*
     对块进行折叠常量处理
     */
-    static func foldConstForBlock(block : Block) {
-        for(node in block.nodes) {
-            if (node is Expr) {
-                var expr = (node as Expr).getOrThrow()
-                expr = foldConstForExpr(expr)
+    static func foldConstForBlock(block : Block) : Unit {
+        try {
+            for(node in block.nodes) {
+                if (node is Expr) {
+                    var expr = (node as Expr).getOrThrow()
+                    expr = foldConstForExpr(expr)
+                }
+                else if (node is Decl) {
+                    var decl = (node as Decl).getOrThrow()
+                    foldConstForDecl(decl)
+                }
             }
-            else if (node is Decl) {
-                var decl = (node as Decl).getOrThrow()
-                foldConstForDecl(decl)
-            }
+        } catch(e: IllegalInputException) {
+            e.message
         }
     }
 
@@ -489,10 +500,17 @@ class CJCodeTool {
         } else if (expr is IfExpr) {
             var if_expr = (expr as IfExpr).getOrThrow()
             if_expr.condition = foldConstForExpr(if_expr.condition)
-            try {
-                foldConstForBlock((if_expr.elseExpr as Block).getOrThrow())
-            } catch (e: ASTException) {}
             foldConstForBlock(if_expr.ifBlock)
+            try {
+                var else_expr = if_expr.elseExpr
+                if (else_expr is Block) {
+                    var else_block = (else_expr as Block).getOrThrow()
+                    foldConstForBlock(else_block)
+                } else if (else_expr is IfExpr) {
+                    if_expr.elseExpr = foldConstForExpr(if_expr.elseExpr)
+                }
+            } catch (e: ASTException) {e.message}
+            
         } else if (expr is ReturnExpr) {
             var ret_expr = (expr as ReturnExpr).getOrThrow()
             ret_expr.expr = foldConstForExpr(ret_expr.expr)
@@ -658,15 +676,16 @@ class CJCodeTool {
         try {
             var progTokens = cangjieLex(code)
             var prog = parseProgram(progTokens)
-
+            prog.dump()
             // let variables = HashSet<MyToken>()
             for(decl in prog.decls) {
                 progTokens = findFunc(decl, progTokens)
             }
 
             return progTokens.toString()
-        } catch(e: Exception) {
-            throw e
+        } catch(e: IllegalInputException) {
+            e.dump()
+            e.message
         }
     }
 
@@ -749,7 +768,12 @@ class CJCodeTool {
         } else if (expr is UnaryExpr) {
             var uexpr = (expr as UnaryExpr).getOrThrow()
             findInExpr(uexpr.expr, variables)
-        } else if (expr is LitConstExpr) {}
+        } else if (expr is Block) {
+            var block = (expr as Block).getOrThrow()
+            findInBlock(block, variables)
+        } 
+        
+        else if (expr is LitConstExpr) {}
 
         else {
             throw IllegalInputException(expr)

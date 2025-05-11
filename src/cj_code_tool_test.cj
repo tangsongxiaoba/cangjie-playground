@@ -73,20 +73,12 @@ class DataProcessor {
     var data: Array < Int64 >
     var processed: Bool = false
     
-    public init(inputData: Array < Int64 >) {
-        this.data = inputData
-    }
-    
-    public func isProcessed(): Bool {
-        return this.processed
-    }
-    
     public func processData() {
         for(item in data) {
             let tempItem = item *(1 + 1)
-            println(tempItem)
+            tempItem += 1
         }
-        this.processed = true
+        processed = true
     }
 }
 """
