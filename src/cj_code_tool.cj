@@ -347,7 +347,7 @@ class CJCodeTool {
                 refractorPattern((node as Pattern).getOrThrow(), oldName, newName)
             } else if (node is TypeNode) {
                 refractorTypeNode((node as TypeNode).getOrThrow(), oldName, newName)
-            } else if (node is ImportContent || node is ImportList) {
+            } else if (node is ImportContent || node is ImportList || node is Modifier || node is PackageHeader) {
             } else {
                 throw IllegalInputException(block)
             }
