@@ -490,7 +490,7 @@ class CJCodeTool {
             var if_expr = (expr as IfExpr).getOrThrow()
             if_expr.condition = foldConstForExpr(if_expr.condition)
             try {
-                if_expr.elseExpr = foldConstForExpr(if_expr.elseExpr)
+                foldConstForBlock((if_expr.elseExpr as Block).getOrThrow())
             } catch (e: ASTException) {}
             foldConstForBlock(if_expr.ifBlock)
         } else if (expr is ReturnExpr) {
