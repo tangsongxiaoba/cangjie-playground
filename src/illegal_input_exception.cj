@@ -15,7 +15,7 @@ class IllegalInputException <: Exception {
     }
 
     public func toString(): String {
-        return node.toTokens().toString()
+        return "// Meet with illegal input:\n" + node.toTokens().toString()
     }
     
     public override func getClassName(): String {
