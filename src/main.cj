@@ -46,7 +46,7 @@ func sendCorsPreflightResponse(res: HttpResponseBuilder) {
 }
 
 main() {
-    let server = HttpServer("127.0.0.1", 8080)
+    let server = HttpServer("0.0.0.0", 8080)
 
     server.route("/api/cj-tool/generate-signature", { req, res =>
         if (req.method == "POST") {
