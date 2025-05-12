@@ -21,10 +21,16 @@ func sendSuccessResponse(res: HttpResponseBuilder, dataPayload: JsonObject) {
     sendJsonResponse(res, 200, response)
 }
 
-func sendErrorResponse(res: HttpResponseBuilder, errorMessage: String, statusCode: UInt16) {
+func sendErrorResponse(res: HttpResponseBuilder, errorMessage: String, statusCode: UInt16, errorDetails: Option<JsonObject>) {
     let response = JsonObject()
     response.put("success", JsonBool(false))
     response.put("error", JsonString(errorMessage))
+    match (errorDetails) {
+        case Some(details) => let errorDataPayload = JsonObject()
+                              errorDataPayload.put("details", details)
+                              response.put("data", errorDataPayload)
+        case None => ()
+    }
     sendJsonResponse(res, statusCode, response)
 }
 
@@ -50,7 +56,7 @@ main() {
                 let code = requestJson.get("code").getOrThrow().asString().getValue()
 
                 if (code.isEmpty()) {
-                    sendErrorResponse(res, "Input code cannot be empty.", 400)
+                    sendErrorResponse(res, "Input code cannot be empty.", 400, None)
                     return
                 }
                 var signature: String
@@ -59,11 +65,13 @@ main() {
                 } catch (e: IllegalInputException) {
                     e.dump()
                     e.printStackTrace()
-                    sendErrorResponse(res, e.message, 400)
+                    let details = JsonObject()
+                    details.put("nodeInfo", JsonString(e.toString()))
+                    sendErrorResponse(res, e.message, 400, details)
                     return
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    sendErrorResponse(res, "Error occurred, check logs.", 500)
+                    sendErrorResponse(res, "Error occurred, check logs.", 500, None)
                     return
                 }
 
@@ -72,14 +80,14 @@ main() {
                 sendSuccessResponse(res, data)
 
             } catch (e: JsonException) {
-                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400)
+                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400, None)
             } catch (e: Exception) {
-                sendErrorResponse(res, "Server error: " + e.message, 500)
+                sendErrorResponse(res, "Server error: " + e.message, 500, None)
             }
         } else if (req.method == "OPTIONS") {
             sendCorsPreflightResponse(res)
         } else {
-            sendErrorResponse(res, "Method Not Allowed", 405)
+            sendErrorResponse(res, "Method Not Allowed", 405, None)
         }
     })
 
@@ -94,7 +102,7 @@ main() {
                 let newName = requestJson.get("newName").getOrThrow().asString().getValue()
 
                 if (code.isEmpty() || path.isEmpty() || oldName.isEmpty() || newName.isEmpty()) {
-                    sendErrorResponse(res, "Missing required fields (code, path, oldName, newName).", 400)
+                    sendErrorResponse(res, "Missing required fields (code, path, oldName, newName).", 400, None)
                     return
                 }
 
@@ -104,11 +112,13 @@ main() {
                 } catch (e: IllegalInputException) {
                     e.dump()
                     e.printStackTrace()
-                    sendErrorResponse(res, e.message, 400)
+                    let details = JsonObject()
+                    details.put("nodeInfo", JsonString(e.toString()))
+                    sendErrorResponse(res, e.message, 400, details)
                     return
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    sendErrorResponse(res, "Error occurred, check logs.", 500)
+                    sendErrorResponse(res, "Error occurred, check logs.", 500, None)
                     return
                 }
                 
@@ -117,15 +127,15 @@ main() {
                 sendSuccessResponse(res, data)
 
             } catch (e: JsonException) {
-                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400)
+                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400, None)
             } catch (e: Exception) {
-                sendErrorResponse(res, "Server error: " + e.message, 500)
+                sendErrorResponse(res, "Server error: " + e.message, 500, None)
             }
         } else if (req.method == "OPTIONS") {
             println("[LOG] Handling general OPTIONS request for: " + req.toString())
             sendCorsPreflightResponse(res)
         } else {
-            sendErrorResponse(res, "Method Not Allowed", 405)
+            sendErrorResponse(res, "Method Not Allowed", 405, None)
         }
     })
 
@@ -143,7 +153,7 @@ main() {
                 CJCodeTool.configureLLM(apiUrl, apiKey, modelName)
 
                 if (code.isEmpty() || path.isEmpty()) {
-                    sendErrorResponse(res, "Missing required fields (code, path).", 400)
+                    sendErrorResponse(res, "Missing required fields (code, path).", 400, None)
                     return
                 }
                 
@@ -153,11 +163,13 @@ main() {
                 } catch (e: IllegalInputException) {
                     e.dump()
                     e.printStackTrace()
-                    sendErrorResponse(res, e.message, 400)
+                    let details = JsonObject()
+                    details.put("nodeInfo", JsonString(e.toString()))
+                    sendErrorResponse(res, e.message, 400, details)
                     return
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    sendErrorResponse(res, "Error occurred, check logs.", 500)
+                    sendErrorResponse(res, "Error occurred, check logs.", 500, None)
                     return
                 }
                 
@@ -166,15 +178,14 @@ main() {
                 sendSuccessResponse(res, data)
 
             } catch (e: JsonException) {
-                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400)
+                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400, None)
             } catch (e: Exception) {
-                sendErrorResponse(res, "Server error: " + e.message, 500)
+                sendErrorResponse(res, "Server error: " + e.message, 500, None)
             }
         } else if (req.method == "OPTIONS") {
-            println("[LOG] Handling general OPTIONS request for: " + req.toString())
             sendCorsPreflightResponse(res)
         } else {
-            sendErrorResponse(res, "Method Not Allowed", 405)
+            sendErrorResponse(res, "Method Not Allowed", 405, None)
         }
     })
 
@@ -186,7 +197,7 @@ main() {
                 let code = requestJson.get("code").getOrThrow().asString().getValue()
 
                 if (code.isEmpty()) {
-                    sendErrorResponse(res, "Input code cannot be empty.", 400)
+                    sendErrorResponse(res, "Input code cannot be empty.", 400, None)
                     return
                 }
 
@@ -196,11 +207,13 @@ main() {
                 } catch (e: IllegalInputException) {
                     e.dump()
                     e.printStackTrace()
-                    sendErrorResponse(res, e.message, 400)
+                    let details = JsonObject()
+                    details.put("nodeInfo", JsonString(e.toString()))
+                    sendErrorResponse(res, e.message, 400, details)
                     return
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    sendErrorResponse(res, "Error occurred, check logs.", 500)
+                    sendErrorResponse(res, "Error occurred, check logs.", 500, None)
                     return
                 }
 
@@ -209,15 +222,15 @@ main() {
                 sendSuccessResponse(res, data)
 
             } catch (e: JsonException) {
-                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400)
+                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400, None)
             } catch (e: Exception) {
-                sendErrorResponse(res, "Server error: " + e.message, 500)
+                sendErrorResponse(res, "Server error: " + e.message, 500, None)
             }
         } else if (req.method == "OPTIONS") {
             println("[LOG] Handling general OPTIONS request for: " + req.toString())
             sendCorsPreflightResponse(res)
         } else {
-            sendErrorResponse(res, "Method Not Allowed", 405)
+            sendErrorResponse(res, "Method Not Allowed", 405, None)
         }
     })
 
@@ -229,7 +242,7 @@ main() {
                 let code = requestJson.get("code").getOrThrow().asString().getValue()
 
                 if (code.isEmpty()) {
-                    sendErrorResponse(res, "Input code cannot be empty.", 400)
+                    sendErrorResponse(res, "Input code cannot be empty.", 400, None)
                     return
                 }
 
@@ -239,11 +252,13 @@ main() {
                 } catch (e: IllegalInputException) {
                     e.dump()
                     e.printStackTrace()
-                    sendErrorResponse(res, e.message, 400)
+                    let details = JsonObject()
+                    details.put("nodeInfo", JsonString(e.toString()))
+                    sendErrorResponse(res, e.message, 400, details)
                     return
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    sendErrorResponse(res, "Error occurred, check logs.", 500)
+                    sendErrorResponse(res, "Error occurred, check logs.", 500, None)
                     return
                 }
 
@@ -252,14 +267,14 @@ main() {
                 sendSuccessResponse(res, data)
 
             } catch (e: JsonException) {
-                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400)
+                sendErrorResponse(res, "Invalid JSON request: " + e.message, 400, None)
             } catch (e: Exception) {
-                sendErrorResponse(res, "Server error: " + e.message, 500)
+                sendErrorResponse(res, "Server error: " + e.message, 500, None)
             }
         } else if (req.method == "OPTIONS") {
             sendCorsPreflightResponse(res)
         } else {
-            sendErrorResponse(res, "Method Not Allowed", 405)
+            sendErrorResponse(res, "Method Not Allowed", 405, None)
         }
     })
 

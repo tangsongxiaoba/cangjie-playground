@@ -13,6 +13,10 @@ class IllegalInputException <: Exception {
     public func dump() {
         node.dump()
     }
+
+    public func toString(): String {
+        return node.toTokens().toString()
+    }
     
     public override func getClassName(): String {
         "IllegalInputException"
