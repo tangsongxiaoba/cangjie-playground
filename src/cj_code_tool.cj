@@ -728,6 +728,7 @@ class CJCodeTool {
         } else if (expr is ForInExpr) {
             var forexpr = (expr as ForInExpr).getOrThrow()
             findInBlock(forexpr.block, variables)
+            findInExpr(forexpr.expr, variables)
         } else if (expr is IfExpr) {
             var ifexpr = (expr as IfExpr).getOrThrow()
             findInExpr(ifexpr.condition, variables)
